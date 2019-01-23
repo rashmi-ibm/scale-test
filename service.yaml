@@ -10,6 +10,8 @@ parameters:
 - name: NAMESPACE
   description: "Test namespace"
   value: istio-scale
+- name: ROUTER_SUFFIX
+  value: router.default.svc.cluster.local
 - name: APP_ID
   description: Name of the application
 - name: PODS_PER_SERVICE
@@ -71,3 +73,17 @@ objects:
       deploymentconfig: ${APP_ID}
     sessionAffinity: None
     type: ClusterIP
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      app: ${APP_ID}
+    name: ${APP_ID}
+  spec:
+    host: ${APP_ID}-${NAMESPACE}.${ROUTER_SUFFIX}
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: ${APP_ID}
+      weight: 100
