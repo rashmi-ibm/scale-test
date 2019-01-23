@@ -1,0 +1,173 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: scale-test
+parameters:
+- name: DOCKER_REGISTRY
+  description: "Local docker registry"
+  value: docker-registry.default.svc:5000
+- name: NAMESPACE
+  description: "Test namespace"
+  value: istio-scale
+objects:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: openjdk18-openshift
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift:latest
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: Source
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      app: mannequin
+    name: mannequin-builder
+  spec:
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: mannequin-builder:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      git:
+        uri: https://github.com/RedHatPerf/mannequin
+      type: Git
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: openjdk18-openshift:latest
+      type: Source
+    triggers:
+    - type: ConfigChange
+    - imageChange:
+        from:
+          kind: ImageStreamTag
+          name: openjdk18-openshift:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: mannequin-builder
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - from:
+        kind: DockerImage
+        name: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin-builder:latest
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: Source
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: mannequin
+  spec:
+    lookupPolicy:
+      local: false
+    tags:
+    - annotations: null
+      from:
+        kind: DockerImage
+        name: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin:latest
+      generation: 3
+      importPolicy: {}
+      name: latest
+      referencePolicy:
+        type: Source
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      app: mannequin
+    name: mannequin
+  spec:
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: mannequin:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      images:
+      - from:
+          kind: ImageStreamTag
+          name: mannequin-builder:latest
+        paths:
+        - destinationDir: deployments
+          sourcePath: /home/jboss/target/mannequin-0.1-SNAPSHOT-fat.jar
+      type: Image
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: openjdk18-openshift:latest
+      type: Source
+    triggers:
+    - imageChange:
+        from:
+          kind: ImageStreamTag
+          name: openjdk18-openshift:latest
+      type: ImageChange
+    - type: ConfigChange
+    - imageChange:
+        from:
+          kind: ImageStreamTag
+          name: mannequin-builder:latest
+      type: ImageChange
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: mannequin
+    name: mannequin
+  spec:
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: mannequin
+          deploymentconfig: mannequin
+      spec:
+        containers:
+        - image: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin:latest
+          imagePullPolicy: Always
+          name: mannequin
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - curl
+                - localhost:8080/
+              initialDelaySeconds: 5
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        containerNames: [ mannequin ]
+        from:
+          kind: ImageStreamTag
+          name: mannequin:latest
+      type: ImageChange
