@@ -1,0 +1,10 @@
+- hosts: hyperfoil-controller
+  vars:
+    hyperfoil_role: controller
+  roles:
+  - hyperfoil.hyperfoil_setup
+- hosts: hyperfoil-agent
+  vars:
+    hyperfoil_role: agent
+  roles:
+  - hyperfoil.hyperfoil_setup

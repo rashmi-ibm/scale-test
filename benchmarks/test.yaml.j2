@@ -1,0 +1,39 @@
+name: test
+hosts:
+{% for agent in agents %}
+  {{ agent }}: {{ agent }}:12345
+{% endfor %}
+simulation:
+  http:
+{% for url in test_urls %}
+  - baseUrl: {{ url }}
+    sharedConnections: {{ (test_shared_connections / (test_urls | length)) | int | default(100, true) }}
+{% endfor %}
+  phases:
+  - rampUp:
+      rampPerSec:
+        initialUsersPerSec: 1
+        targetUsersPerSec: {{ test_users_per_sec }}
+        duration: {{ test_rampup_duration }}
+        scenario: &scenario
+          orderedSequences:
+          - test:
+            - randomInt:
+                min: 1
+                max: {{ num_apps }}
+                var: appId
+            - httpRequest:
+                GET:
+                  pattern: /app-${appId}/name
+            - awaitAllResponses
+  - steadyState:
+      constantPerSec:
+        usersPerSec:
+          base:      {{ test_users_per_sec }}
+          increment: {{ test_inc_users_per_sec }}
+        maxIterations: 30
+        startAfter: rampUp
+        duration: {{ test_steady_duration }}
+        maxDuration: {{ test_steady_duration + 1 }}
+        maxUnfinishedSessions: {{ test_users_per_sec }}
+        scenario: *scenario

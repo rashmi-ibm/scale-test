@@ -1,23 +1,25 @@
 apiVersion: v1
+kind: List
 items:
 - apiVersion: networking.istio.io/v1alpha3
   kind: VirtualService
   metadata:
-    name: versionbased
+    name: app-paths
   spec:
     hosts:
-    - "*"
+    - app.{{ wildcard_domain }}
+    - app.{{ namespace }}.svc.cluster.local
     gateways:
-    - app-gateway
+    - app-gateway.istio-system.svc.cluster.local
     http:
 {% for index in range(1, num_apps + 1) %}
     - match:
-        uri:
-          prefix: app-{{ index }}/
+      - uri:
+          prefix: /app-{{ index }}/
+      rewrite:
+        uri: /
       route:
       - destination:
-          port:
-            number: 8080
           host: app
           subset: app-{{ index }}
 {% endfor %}
@@ -26,7 +28,7 @@ items:
   metadata:
     name: app-subsets
   spec:
-    host: "*"
+    host: app.{{ namespace }}.svc.cluster.local
     trafficPolicy:
       loadBalancer:
         simple: RANDOM
@@ -36,6 +38,9 @@ items:
       labels:
         deploymentconfig: app-{{ index }}
 {% endfor %}
+# Automatic injection will be disabled by default, we selectively enable that for app pods.
+# Otherwise, in Openshift even the builder and deployer pods would get the sidecar injected.
+# Alternative solution: https://bani.com.br/2018/09/istio-sidecar-injection-enabling-automatic-injection-adding-exceptions-and-debugging/
 {% for index in range(1, num_apps + 1) %}
 - apiVersion: v1
   kind: DeploymentConfig
@@ -47,6 +52,8 @@ items:
     replicas: {{ pods_per_service }}
     template:
       metadata:
+        annotations:
+          sidecar.istio.io/inject: "true"
         labels:
           app: {{ app_label }}
           deploymentconfig: app-{{ index }}
@@ -55,6 +62,12 @@ items:
         - image: {{ docker_registry }}/{{ namespace }}/mannequin:latest
           imagePullPolicy: Always
           name: mannequin
+          env:
+          - name: NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
           ports:
           - containerPort: 8080
             protocol: TCP
@@ -70,6 +83,7 @@ items:
     triggers:
     - type: ConfigChange
     - imageChangeParams:
+        automatic: true
         containerNames: [ mannequin ]
         from:
           kind: ImageStreamTag

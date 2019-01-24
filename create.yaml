@@ -1,6 +1,12 @@
 - hosts: 127.0.0.1
   connection: local
+  gather_facts: false
   tasks:
+  - name: Get old deployments
+    command: oc get dc -l app=={{ app_label }} -o name
+    register: old_dcs
+  - name: Delete old deployments
+    command: oc delete {{ old_dcs.stdout }}
   - name: Pick temp file
     tempfile:
       prefix: resources-
