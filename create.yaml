@@ -1,0 +1,14 @@
+- hosts: 127.0.0.1
+  connection: local
+  tasks:
+  - name: Pick temp file
+    tempfile:
+      prefix: resources-
+      suffix: .yaml
+    register: resources
+  - name: Generate resources
+    template:
+      src: resources.yaml.j2
+      dest: "{{ resources.path }}"
+  - name: Apply resources
+    command: oc apply -f "{{ resources.path }}"

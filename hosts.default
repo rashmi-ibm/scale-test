@@ -1,0 +1,7 @@
+localhost
+
+[all:vars]
+app_label=app
+docker_registry=docker-registry.default.svc:5000
+num_apps=10
+namespace=istio-scale

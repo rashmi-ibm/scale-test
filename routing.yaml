@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Template
+metadata:
+  creationTimestamp: null
+  name: scale-test
+parameters:
+- name: WILDCARD_DOMAIN
+  description: "Wildcard domain that will be redirected to Istio Ingress Gateway"
+  value: istio.router.default.svc.cluster.local
+- name: NAMESPACE
+  description: "Test namespace"
+  value: istio-scale
+- name: APP_LABEL
+  description: Value for 'app' label on the pods.
+  value: app
+objects:
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: istio-ingress-route
+    namespace: istio-system
+  spec:
+    host: subdomain.${WILDCARD_DOMAIN}
+    tls:
+      # passthrough + allow would be better but not possible ATM
+      termination: edge
+      insecureEdgeTerminationPolicy: Allow
+    to:
+      kind: Service
+      name: istio-ingressgateway
+      weight: 100
+    wildcardPolicy: Subdomain
+- apiVersion: networking.istio.io/v1alpha3
+  kind: Gateway
+  metadata:
+    name: app-gateway
+  spec:
+    selector:
+      istio: ingressgateway # use Istio default gateway implementation
+    servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+      - "*"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      app: ${APP_LABEL}
+    name: app
+  spec:
+    ports:
+    - name: http-8080
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: ${APP_LABEL}
+    sessionAffinity: None
+    type: ClusterIP
