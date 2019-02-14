@@ -50,6 +50,8 @@ items:
     name: app-{{ index }}
   spec:
     replicas: {{ pods_per_app }}
+    strategy:
+      type: Recreate
     template:
       metadata:
         annotations:
