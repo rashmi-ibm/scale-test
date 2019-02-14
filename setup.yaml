@@ -1,5 +1,4 @@
-- hosts: 127.0.0.1
-  connection: local
+- hosts: backend
   gather_facts: false
   tasks:
   - name: Get old deployments
