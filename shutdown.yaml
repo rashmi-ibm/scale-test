@@ -6,13 +6,18 @@
   - name: Get deployment configs
     command: oc get dc -l app=={{ app_label }} -o name
     register: dcs
-  - name: Scale down configs
-    command: oc scale {{ dcs.stdout }} --replicas=0
+  - name: Delete deployment configs
+    command: oc delete {{ dcs.stdout }}
   - name: Get replications controllers
     command: oc get rc -l app=={{ app_label }} -o name
     register: rcs
-  - name: Kill replication controllers to be sure
+  - name: Kill replication controllers
     command: oc delete {{ rcs.stdout }}
+  - name: Get pods
+    command: oc get po -l app=={{ app_label }} -o name
+    register: pods
+  - name: Kill pods
+    command: oc delete {{ pods.stdout }}
 - hosts: hyperfoil
   roles:
   - hyperfoil.hyperfoil_shutdown
