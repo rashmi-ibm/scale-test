@@ -49,7 +49,7 @@ items:
       app: {{ app_label }}
     name: app-{{ index }}
   spec:
-    replicas: {{ pods_per_service }}
+    replicas: {{ pods_per_app }}
     template:
       metadata:
         annotations:

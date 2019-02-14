@@ -18,3 +18,19 @@
       dest: "{{ resources.path }}"
   - name: Apply resources
     command: oc apply -f "{{ resources.path }}"
+  - name: Wait for pods to come up
+    shell: oc get po -l app=={{ app_label }} --no-headers | grep '2/2' | wc
+    register: ready_pods
+    until: ready_pods.stdout == num_apps * pods_per_app
+    delay: 5
+    retries: 30
+- hosts: hyperfoil-controller
+  vars:
+    hyperfoil_role: controller
+  roles:
+  - hyperfoil.hyperfoil_setup
+- hosts: hyperfoil-agent
+  vars:
+    hyperfoil_role: agent
+  roles:
+  - hyperfoil.hyperfoil_setup
