@@ -13,3 +13,6 @@
     register: rcs
   - name: Kill replication controllers to be sure
     command: oc delete {{ rcs.stdout }}
+- hosts: hyperfoil
+  roles:
+  - hyperfoil.hyperfoil_shutdown
