@@ -19,9 +19,9 @@
   - name: Apply resources
     command: oc apply -f "{{ resources.path }}"
   - name: Wait for pods to come up
-    shell: oc get po -l app=={{ app_label }} --no-headers | grep '2/2' | wc
+    shell: oc get po -l app=={{ app_label }} --no-headers | grep '2/2' | wc -l
     register: ready_pods
-    until: ready_pods.stdout == (num_apps | int) * (pods_per_app | int)
+    until: ready_pods.stdout | int == (num_apps | int) * (pods_per_app | int)
     delay: 5
     retries: 30
 - hosts: hyperfoil-controller
