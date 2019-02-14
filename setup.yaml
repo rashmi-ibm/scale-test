@@ -5,6 +5,7 @@
     command: oc get dc -l app=={{ app_label }} -o name
     register: old_dcs
   - name: Delete old deployments
+    when: old_dcs.stdout
     command: oc delete {{ old_dcs.stdout }}
   - name: Pick temp file
     tempfile:
