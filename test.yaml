@@ -1,0 +1,16 @@
+# Gather facts
+- hosts:
+  - hyperfoil-controller
+  - hyperfoil-agent
+  tasks: []
+- hosts: 127.0.0.1
+  connection: local
+  roles:
+  - hyperfoil.hyperfoil_test
+  vars:
+    test_name: test
+- hosts:
+  - hyperfoil-controller
+  - hyperfoil-agent
+  roles:
+  - hyperfoil.hyperfoil_shutdown
