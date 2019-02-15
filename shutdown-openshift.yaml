@@ -2,14 +2,19 @@
   command: oc get dc -l app=={{ app_label }} -o name
   register: dcs
 - name: Delete deployment configs
+  when: dcs.stdout
   command: oc delete {{ dcs.stdout }}
 - name: Get replications controllers
   command: oc get rc -l app=={{ app_label }} -o name
   register: rcs
 - name: Kill replication controllers
+  when: rcs.stdout
   command: oc delete {{ rcs.stdout }}
+  failed_when: false
 - name: Get pods
   command: oc get po -l app=={{ app_label }} -o name
   register: pods
 - name: Kill pods
+  when: pods.stdout
   command: oc delete {{ pods.stdout }}
+  failed_when: false
