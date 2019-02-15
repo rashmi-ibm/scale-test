@@ -1,6 +1,8 @@
 - hosts: backend
   gather_facts: false
   tasks:
+  - name: Switch namespace
+    command: oc project {{ namespace }}
   - include_tasks: shutdown-openshift.yaml
   - name: Pick temp file
     tempfile:
@@ -14,7 +16,7 @@
   - name: Apply resources
     command: oc apply -f "{{ resources.path }}"
   - name: Wait for pods to come up
-    shell: oc get po -l app=={{ app_label }} --no-headers | grep '2/2' | wc -l
+    shell: oc get po -l app=={{ app_label }} -n {{ namespace }} --no-headers | grep '2/2' | wc -l
     register: ready_pods
     until: ready_pods.stdout | int == (num_apps | int) * (pods_per_app | int)
     delay: 5

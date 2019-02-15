@@ -5,6 +5,7 @@ items:
   kind: VirtualService
   metadata:
     name: app-paths
+    namespace: {{ namespace }}
   spec:
     hosts:
     - app.{{ wildcard_domain }}
@@ -27,6 +28,7 @@ items:
   kind: DestinationRule
   metadata:
     name: app-subsets
+    namespace: {{ namespace }}
   spec:
     host: app.{{ namespace }}.svc.cluster.local
     trafficPolicy:
@@ -48,6 +50,7 @@ items:
     labels:
       app: {{ app_label }}
     name: app-{{ index }}
+    namespace: {{ namespace }}
   spec:
     replicas: {{ pods_per_app }}
     strategy:
