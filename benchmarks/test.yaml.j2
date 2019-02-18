@@ -31,7 +31,7 @@ simulation:
         usersPerSec:
           base:      {{ test_users_per_sec }}
           increment: {{ test_inc_users_per_sec }}
-        maxIterations: 30
+        maxIterations: {{ test_max_iterations | default(30, true) }}
         startAfter: rampUp
         duration: {{ test_steady_duration }}
         maxDuration: {{ test_steady_duration + 1 }}
