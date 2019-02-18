@@ -1,4 +1,4 @@
-- hosts: backend
+- hosts: openshift
   gather_facts: false
   tasks:
   - name: Switch namespace

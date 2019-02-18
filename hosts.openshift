@@ -14,13 +14,16 @@ hyperfoil_jfr=false
 #hyperfoil_log_config=/home/benchuser/rvansa/log4j2.xml
 hyperfoil_log_config=/home/benchuser/rvansa/log4j2-info.xml
 
-[backend]
-backend ansible_host=benchserver7
+[openshift]
+benchserver7
 
-[backend:vars]
+[openshift:vars]
 backend_servers=8
 backend_workers=16
 backend_cpu=16
+
+[compute]
+benchserver2
 
 [all:vars]
 backend_node=benchserver2

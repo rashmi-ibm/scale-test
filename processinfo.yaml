@@ -1,0 +1,23 @@
+- hosts: openshift
+  tasks:
+  - name: Get pod containers
+    shell: oc get po -n istio-scale -o json | jq -r ".items[].status.containerStatuses[].containerID" | cut -c 10- | tr '\n' ' '
+    register: containers
+- hosts: compute
+  tasks:
+  - name: Get process ids
+    shell: sudo docker inspect {{ hostvars[groups['openshift'][0]]['containers']['stdout'] }}
+    register: docker_inspect
+  - name: Filter pids
+    set_fact:
+      pids: "{{ docker_inspect.stdout | from_json | json_query('[].State.Pid') | join(' ') }}"
+  - name: Get process info
+    shell: ps u --pid {{ pids }}
+    register: psinfo
+- hosts: 127.0.0.1
+  connection: local
+  tasks:
+  - name: Store process info
+    copy:
+      content: "{{ hostvars[groups['compute'][0]]['psinfo']['stdout'] }}"
+      dest: "ps.{{ hostvars[groups['compute'][0]]['ansible_fqdn'] }}.txt"
