@@ -1,6 +1,9 @@
 - hosts: openshift
   gather_facts: false
   tasks:
+  - name: Login
+    when: oc_username is defined and oc_password is defined
+    command: oc login --username={{ oc_username }} --password={{ oc_password }}
   - name: Switch namespace
     command: oc project {{ namespace }}
   - include_tasks: shutdown-openshift.yaml
