@@ -1,7 +1,7 @@
 - hosts: openshift
   tasks:
   - name: Get pod containers
-    shell: oc get po -n {{ item }} -o json | jq -r ".items[].status.containerStatuses[].containerID" | cut -c 10- | tr '\n' ' '
+    shell: oc get po -n {{ item }} -o json | jq -r '.items[] | select(.status.conditions[] | select(.type=="Ready" and .status=="True")) | .status.containerStatuses[].containerID' | cut -c 10- | tr '\n' ' '
     register: containers
     loop:
     - istio-scale
