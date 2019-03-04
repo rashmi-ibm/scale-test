@@ -1,12 +1,26 @@
 - hosts: openshift
   tasks:
   - name: Get pod containers
-    shell: oc get po -n istio-scale -o json | jq -r ".items[].status.containerStatuses[].containerID" | cut -c 10- | tr '\n' ' '
+    shell: oc get po -n {{ item }} -o json | jq -r ".items[].status.containerStatuses[].containerID" | cut -c 10- | tr '\n' ' '
     register: containers
-- hosts: compute
+    loop:
+    - istio-scale
+    - istio-system
+  - name: Set containers
+    set_fact:
+      container_ids: "{{ item.container_ids }}"
+    delegate_to: "{{ item.host }}"
+    delegate_facts: true
+    run_once: true
+    loop:
+    - host: "{{ groups['compute'][0] }}"
+      container_ids: "{{ containers.results[0].stdout }}"
+    - host: "{{ groups['openshift'][0] }}"
+      container_ids: "{{ containers.results[1].stdout }}"
+- hosts: [ compute, openshift ]
   tasks:
   - name: Get process ids
-    shell: sudo docker inspect {{ hostvars[groups['openshift'][0]]['containers']['stdout'] }}
+    shell: sudo docker inspect {{ container_ids }}
     register: docker_inspect
   - name: Filter pids
     set_fact:
@@ -19,5 +33,8 @@
   tasks:
   - name: Store process info
     copy:
-      content: "{{ hostvars[groups['compute'][0]]['psinfo']['stdout'] }}"
-      dest: "ps.{{ hostvars[groups['compute'][0]]['ansible_fqdn'] }}.txt"
+      content: "{{ hostvars[item]['psinfo']['stdout'] }}"
+      dest: "ps.{{ hostvars[item]['ansible_fqdn'] }}.txt"
+    loop:
+    - "{{ groups['compute'][0] }}"
+    - "{{ groups['openshift'][0]}}"
