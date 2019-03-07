@@ -24,9 +24,10 @@
     register: docker_inspect
   - name: Filter pids
     set_fact:
-      pids: "{{ docker_inspect.stdout | from_json | json_query('[].State.Pid') | join(' ') }}"
+      pids: "{{ docker_inspect.stdout | from_json | json_query('[].State.Pid') }}"
   - name: Get process info
-    shell: ps u --pid {{ pids }}
+    # Assuming that container pids are session leaders
+    shell: ps fu -s {{ pids | join(' -s ')}}
     register: psinfo
 - hosts: 127.0.0.1
   connection: local
