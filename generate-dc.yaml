@@ -1,0 +1,21 @@
+- name: Pick temp file
+  tempfile:
+    prefix: dc-
+    suffix: .yaml
+  register: resources
+- name: Generate deployment configs
+  template:
+    src: dc.yaml.j2
+    dest: "{{ resources.path }}"
+- name: Apply resources
+  command: oc apply -f "{{ resources.path }}"
+- name: Wait for pods to come up
+  shell: oc get po -l app=={{ app_label }} -l batch==batch-{{ app_first }} -n {{ namespace }} --no-headers | grep '2/2' | wc -l
+  register: ready_pods
+  until: ready_pods.stdout | int == (batch_apps | int) * (pods_per_app | int)
+  delay: 5
+  retries: "{{ [20, 3 * (batch_apps | int) * (pods_per_app | int)] | max }}"
+- name: Drop temp file
+  file:
+    path: "{{ resources.path }}"
+    state: absent

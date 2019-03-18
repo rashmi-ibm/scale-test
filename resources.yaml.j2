@@ -40,60 +40,46 @@ items:
       labels:
         deploymentconfig: app-{{ index }}
 {% endfor %}
-# Automatic injection will be disabled by default, we selectively enable that for app pods.
-# Otherwise, in Openshift even the builder and deployer pods would get the sidecar injected.
-# Alternative solution: https://bani.com.br/2018/09/istio-sidecar-injection-enabling-automatic-injection-adding-exceptions-and-debugging/
-{% for index in range(1, num_apps | int + 1) %}
-- apiVersion: v1
-  kind: DeploymentConfig
+- apiVersion: networking.istio.io/v1alpha3
+  kind: VirtualService
   metadata:
-    labels:
-      app: {{ app_label }}
-    name: app-{{ index }}
+    name: app-canary
     namespace: {{ namespace }}
   spec:
-    replicas: {{ pods_per_app }}
-    strategy:
-      type: Recreate
-    template:
-      metadata:
-        annotations:
-          sidecar.istio.io/inject: "true"
-        labels:
-          app: {{ app_label }}
-          deploymentconfig: app-{{ index }}
-      spec:
-        nodeSelector:
-          kubernetes.io/hostname: {{ backend_node }}
-        containers:
-        - image: {{ docker_registry }}/{{ namespace }}/mannequin:latest
-          imagePullPolicy: Always
-          name: mannequin
-          env:
-          - name: NAME
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: metadata.name
-          ports:
-          - containerPort: 8080
-            protocol: TCP
-          readinessProbe:
-            exec:
-              command:
-                - curl
-                - localhost:8080/
-              initialDelaySeconds: 5
-          resources: {}
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-    triggers:
-    - type: ConfigChange
-    - imageChangeParams:
-        automatic: true
-        containerNames: [ mannequin ]
-        from:
-          kind: ImageStreamTag
-          name: mannequin:latest
-      type: ImageChange
-{% endfor %}
+    hosts:
+    - app.{{ wildcard_domain }}
+    - app.{{ namespace }}.svc.cluster.local
+    gateways:
+    - app-gateway.istio-system.svc.cluster.local
+    http:
+    - match:
+      - uri:
+          prefix: /any/
+      rewrite:
+        uri: /
+      route:
+      - destination:
+          host: app
+          subset: stable
+        weight: 90
+      - destination:
+          host: app
+          subset: canary
+        weight: 10
+- apiVersion: networking.istio.io/v1alpha3
+  kind: DestinationRule
+  metadata:
+    name: app-canary
+    namespace: {{ namespace }}
+  spec:
+    host: app.{{ namespace }}.svc.cluster.local
+    trafficPolicy:
+      loadBalancer:
+        simple: RANDOM
+    subsets:
+    - name: stable
+      labels:
+        app.variant: stable
+    - name: canary
+      labels:
+        app.variant: canary
