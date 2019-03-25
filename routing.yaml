@@ -17,10 +17,14 @@ objects:
 - apiVersion: route.openshift.io/v1
   kind: Route
   metadata:
-    name: istio-ingress-route
-    namespace: istio-system
+    name: istio-ingress
+    namespace: ${ISTIO_NAMESPACE}
   spec:
     host: subdomain.${WILDCARD_DOMAIN}
+    # istio-ingressgateway has several ports. Without specifying the port explicitly
+    # it would loadbalance between those ports round-robin.
+    port:
+      targetPort: 80
     tls:
       # passthrough + allow would be better but not possible ATM
       termination: edge
@@ -34,7 +38,7 @@ objects:
   kind: Gateway
   metadata:
     name: app-gateway
-    namespace: istio-system
+    namespace: ${NAMESPACE}
   spec:
     selector:
       istio: ingressgateway # use Istio default gateway implementation

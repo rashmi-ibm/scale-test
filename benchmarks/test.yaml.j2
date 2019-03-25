@@ -26,6 +26,19 @@ simulation:
                 GET:
                   pattern: /app-${appId}/name
             - awaitAllResponses
+            - httpRequest:
+                GET: /any/name
+            - awaitAllResponses
+            - randomItem:
+                var: url
+                list:
+{% for url in test_urls %}
+                - {{ url }}
+{% endfor %}
+            - httpRequest:
+                GET:
+                  pattern: /any/proxy?url=${url}/app-${appId}/name
+            - awaitAllResponses
   - steadyState:
       constantPerSec:
         usersPerSec:
