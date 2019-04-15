@@ -10,6 +10,9 @@ parameters:
 - name: NAMESPACE
   description: "Test namespace"
   value: istio-scale
+- name: ISTIO_NAMESPACE
+  description: "Test namespace"
+  value: istio-system
 - name: APP_LABEL
   description: Value for 'app' label on the pods.
   value: app
