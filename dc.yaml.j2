@@ -44,15 +44,17 @@ items:
           - name: VARIANT
             value: {{ app_variant }}
           - name: JAVA_OPTIONS
-            value: -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory
+            value: >
+              -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory
+              -Dmannequin.port=4040
           ports:
-          - containerPort: 8080
+          - containerPort: 4040
             protocol: TCP
           readinessProbe:
             exec:
               command:
                 - curl
-                - localhost:8080/
+                - localhost:4040/
               initialDelaySeconds: 5
           resources: {}
           terminationMessagePath: /dev/termination-log

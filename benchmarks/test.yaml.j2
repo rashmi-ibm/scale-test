@@ -1,52 +1,73 @@
 name: test
-hosts:
-{% for agent in agents %}
-  {{ agent }}: {{ agent }}:12345
+agents:
+{% for agent in groups[hyperfoil_agent_group] %}
+  {{ agent }}: {{ hostvars[agent]['ansible_host'] }}:{{ hyperfoil_agent_port }}
 {% endfor %}
-simulation:
-  http:
-{% for url in test_urls %}
-  - baseUrl: {{ url }}
-    sharedConnections: {{ (test_shared_connections / (test_urls | length)) | int | default(100, true) }}
-{% endfor %}
-  phases:
-  - rampUp:
-      rampPerSec:
-        initialUsersPerSec: 1
-        targetUsersPerSec: {{ test_users_per_sec }}
-        duration: {{ test_rampup_duration }}
-        scenario: &scenario
-          orderedSequences:
+http:
+  baseUrl: http://app.{{ wildcard_domain }}
+  sharedConnections: {{ test_shared_connections | default(100, true) }}
+phases:
+- rampUp:
+    rampPerSec:
+      initialUsersPerSec: 1
+      targetUsersPerSec: {{ test_users_per_sec }}
+      duration: {{ test_rampup_duration }}
+      forks:
+        simple: &simple
+          weight: 1
+          scenario:
+          - params: &params
+            - randomInt:
+                var: p
+                min: 200
+                max: 300
+            - randomItem:
+                list:
+                  stable: 0.8
+                  canary: 0.1
+                  mirror: 0.1
+                var: variant
+          - test:
+            - httpRequest:
+                GET:
+                  pattern: /mersenneprime?p=${p}
+                headers:
+                  x-variant:
+                    var: variant
+        proxy: &proxy
+          weight: 1
+          scenario:
+          - params: *params
+          - test:
+            - httpRequest:
+                GET:
+                  pattern: /proxy?p=${p}&url=app.{{ namespace }}:4040/mersenneprime?p=${p}
+        db: &db
+          weight: 1
+          scenario:
+          - params: *params
           - test:
             - randomInt:
-                min: 1
-                max: {{ num_apps }}
-                var: appId
+                var: size
+                min: 5
+                max: 20
             - httpRequest:
                 GET:
-                  pattern: /app-${appId}/name
-            - awaitAllResponses
-            - httpRequest:
-                GET: /any/name
-            - awaitAllResponses
-            - randomItem:
-                var: url
-                list:
-{% for url in test_urls %}
-                - {{ url }}
-{% endfor %}
-            - httpRequest:
-                GET:
-                  pattern: /any/proxy?url=${url}/app-${appId}/name
-            - awaitAllResponses
-  - steadyState:
-      constantPerSec:
-        usersPerSec:
-          base:      {{ test_users_per_sec }}
-          increment: {{ test_inc_users_per_sec }}
-        maxIterations: {{ test_max_iterations | default(30, true) }}
-        startAfter: rampUp
-        duration: {{ test_steady_duration }}
-        maxDuration: {{ test_steady_duration + 1 }}
-        maxUnfinishedSessions: {{ test_users_per_sec }}
-        scenario: *scenario
+                  pattern: /db?p=${p}&host=app.{{ namespace }}&size=${size}
+                headers:
+                  x-variant:
+                    var: variant
+- steadyState:
+    constantPerSec:
+      usersPerSec:
+        base:      {{ test_users_per_sec }}
+        increment: {{ test_inc_users_per_sec }}
+      maxIterations: {{ test_max_iterations | default(30, true) }}
+      startAfter: rampUp
+      duration: {{ test_steady_duration }}
+      maxDuration: {{ test_steady_duration + 1 }}
+      maxUnfinishedSessions: {{ test_users_per_sec }}
+      forks:
+        simple: *simple
+        proxy: *proxy
+        db: *db

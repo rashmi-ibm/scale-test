@@ -17,26 +17,27 @@ parameters:
   description: Value for 'app' label on the pods.
   value: app
 objects:
-- apiVersion: route.openshift.io/v1
-  kind: Route
-  metadata:
-    name: istio-ingress
-    namespace: ${ISTIO_NAMESPACE}
-  spec:
-    host: subdomain.${WILDCARD_DOMAIN}
-    # istio-ingressgateway has several ports. Without specifying the port explicitly
-    # it would loadbalance between those ports round-robin.
-    port:
-      targetPort: 80
-    tls:
-      # passthrough + allow would be better but not possible ATM
-      termination: edge
-      insecureEdgeTerminationPolicy: Allow
-    to:
-      kind: Service
-      name: istio-ingressgateway
-      weight: 100
-    wildcardPolicy: Subdomain
+# Maistra creates route automatically when ior_enabled: true
+# - apiVersion: route.openshift.io/v1
+#   kind: Route
+#   metadata:
+#     name: istio-ingress
+#     namespace: ${ISTIO_NAMESPACE}
+#   spec:
+#     host: subdomain.${WILDCARD_DOMAIN}
+#     # istio-ingressgateway has several ports. Without specifying the port explicitly
+#     # it would loadbalance between those ports round-robin.
+#     port:
+#       targetPort: 80
+#     tls:
+#       # passthrough + allow would be better but not possible ATM
+#       termination: edge
+#       insecureEdgeTerminationPolicy: Allow
+#     to:
+#       kind: Service
+#       name: istio-ingressgateway
+#       weight: 100
+#     wildcardPolicy: Subdomain
 - apiVersion: networking.istio.io/v1alpha3
   kind: Gateway
   metadata:
@@ -51,7 +52,8 @@ objects:
         name: http
         protocol: HTTP
       hosts:
-      - "*"
+      # Catch-all route not allowed in Maistra
+      - "*.${WILDCARD_DOMAIN}"
 - apiVersion: v1
   kind: Service
   metadata:
@@ -61,11 +63,82 @@ objects:
     namespace: ${NAMESPACE}
   spec:
     ports:
-    - name: http-8080
-      port: 8080
+    # The port number has to be hardcoded as templates don't allow
+    # integer parameters and definition with string port fail with
+    #    Error from server: unrecognized type: int32
+    - name: http-4040
+      port: 4040
       protocol: TCP
-      targetPort: 8080
+      targetPort: 4040
+    - name: db-5432
+      port: 5432
+      protocol: TCP
+      targetPort: 5432
     selector:
       app: ${APP_LABEL}
     sessionAffinity: None
     type: ClusterIP
+- apiVersion: networking.istio.io/v1alpha3
+  kind: VirtualService
+  metadata:
+    name: variant
+    namespace: ${NAMESPACE}
+  spec:
+    hosts:
+    - app.${WILDCARD_DOMAIN}
+    - app.${NAMESPACE}.svc.cluster.local
+    gateways:
+    - app-gateway
+    http:
+    - match:
+      - headers:
+          x-variant:
+            exact: stable
+      route:
+      - destination:
+          host: app
+          port:
+            number: 4040
+          subset: stable
+    - match:
+      - headers:
+          x-variant:
+            exact: canary
+      route:
+      - destination:
+          host: app
+          port:
+            number: 4040
+          subset: canary
+    - match:
+      - headers:
+          x-variant:
+            exact: mirror
+      route:
+      - destination:
+          host: app
+          port:
+            number: 4040
+          subset: stable
+      mirror:
+        host: app
+        port:
+          number: 4040
+        subset: canary
+- apiVersion: networking.istio.io/v1alpha3
+  kind: DestinationRule
+  metadata:
+    name: variant
+    namespace: ${NAMESPACE}
+  spec:
+    host: app.${NAMESPACE}.svc.cluster.local
+    trafficPolicy:
+      loadBalancer:
+        simple: RANDOM
+    subsets:
+    - name: stable
+      labels:
+        app.variant: stable
+    - name: canary
+      labels:
+        app.variant: canary

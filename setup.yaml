@@ -4,24 +4,66 @@
   - name: Login
     when: oc_username is defined and oc_password is defined
     command: oc login --username={{ oc_username }} --password={{ oc_password }}
+  - name: Check namespace presence
+    command: oc get project {{ namespace }}
+    register: ns_exists
+    failed_when: false
+  - name: Create namespace
+    when: ns_exists.rc != 0
+    command: oc new-project {{ namespace }}
   - name: Switch namespace
     command: oc project {{ namespace }}
-  - include_tasks: shutdown-openshift.yaml
-  - name: Pick temp file
-    tempfile:
-      prefix: resources-
-      suffix: .yaml
-    register: resources
-  - name: Generate resources
-    template:
-      src: resources.yaml.j2
-      dest: "{{ resources.path }}"
-  - name: Apply resources
-    command: oc apply -f "{{ resources.path }}"
-  - name: Drop temp file
-    file:
-      path: "{{ resources.path }}"
-      state: absent
+    failed_when: false
+  - name: Clean leftovers from previous test
+    include_tasks: shutdown-openshift.yaml
+    when: ns_exists.rc == 0
+  - name: Check imagestream presence
+    command: oc get is mannequin
+    register: is_exists
+    failed_when: false
+  - name: Upload builders.yaml
+    when: is_exists.rc != 0
+    copy:
+      src: builders.yaml
+      dest: /tmp/builders.yaml
+  - name: Create builders and imagestreams
+    when: is_exists.rc != 0
+    shell: >
+      oc process -f /tmp/builders.yaml
+      -p NAMESPACE={{ namespace }}
+      -p DOCKER_REGISTRY={{ docker_registry }}
+      | oc apply -f -
+  # This seems to fail on the first try due to concurrent modification
+  # If the command fails all the time, make sure you're on VPN
+  - name: Start image import
+    when: is_exists.rc != 0
+    command: oc import-image openjdk18-openshift
+    register: import
+    until: import.rc == 0
+    delay: 1
+    retries: 10
+  - name: Start build
+    when: is_exists.rc != 0
+    command: oc start-build mannequin-builder
+  - name: Wait for build to finish
+    when: is_exists.rc != 0
+    command: oc get build -l buildconfig=mannequin --field-selector status==Complete
+    register: builds
+    until: builds.stdout != ""
+    delay: 6
+    retries: 100
+  - name: Upload /tmp/routing.yaml
+    copy:
+      src: routing.yaml
+      dest: /tmp/routing.yaml
+  - name: Apply routing template
+    shell: >
+      oc process -f /tmp/routing.yaml
+      -p NAMESPACE={{ namespace }}
+      -p WILDCARD_DOMAIN={{ wildcard_domain }}
+      -p APP_LABEL={{ app_label }}
+      | oc apply -f -
+# When starting all the deployments concurrently sometimes things get stuck
   - name: Generate deployment configs in batches
     include_tasks: generate-dc.yaml
     vars:
@@ -30,12 +72,5 @@
     loop_control:
       loop_var: app_first
 - hosts: hyperfoil-controller
-  vars:
-    hyperfoil_role: controller
-  roles:
-  - hyperfoil.hyperfoil_setup
-- hosts: hyperfoil-agent
-  vars:
-    hyperfoil_role: agent
   roles:
   - hyperfoil.hyperfoil_setup

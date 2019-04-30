@@ -35,8 +35,7 @@ test_users_per_sec=5000
 test_inc_users_per_sec=1000
 test_shared_connections=5000
 
-test_urls=[ "http://app.istio.benchserver7.perf.lab.eng.rdu.redhat.com" ]
-gateway=app-gateway.istio-system.svc.cluster.local
+# test_urls=[ "http://app.istio.benchserver7.perf.lab.eng.rdu.redhat.com" ]
 
 app_label=app
 docker_registry=docker-registry.default.svc:5000
