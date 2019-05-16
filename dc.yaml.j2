@@ -2,9 +2,11 @@ apiVersion: v1
 kind: List
 items:
 {% for index in range(app_first | int, app_first | int + batch_apps | int) %}
-# There are 20% of canary deployments and the prob. to hit canary is 10%
-# If the routing did not weight properly we would get 20% chance, now we should get just 10% chance
-{% set app_variant = [ "canary", "stable", "stable", "stable", "stable" ] | random %}
+{%   if index % 5 == 1 %}
+{%     set app_variant = "canary" %}
+{%   else %}
+{%     set app_variant = "stable" %}
+{%   endif %}
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
@@ -46,15 +48,14 @@ items:
           - name: JAVA_OPTIONS
             value: >
               -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory
-              -Dmannequin.port=4040
           ports:
-          - containerPort: 4040
+          - containerPort: 8080
             protocol: TCP
           readinessProbe:
             exec:
               command:
                 - curl
-                - localhost:4040/
+                - localhost:8080/
               initialDelaySeconds: 5
           resources: {}
           terminationMessagePath: /dev/termination-log

@@ -66,10 +66,10 @@ objects:
     # The port number has to be hardcoded as templates don't allow
     # integer parameters and definition with string port fail with
     #    Error from server: unrecognized type: int32
-    - name: http-4040
-      port: 4040
+    - name: http-8080
+      port: 8080
       protocol: TCP
-      targetPort: 4040
+      targetPort: 8080
     - name: db-5432
       port: 5432
       protocol: TCP
@@ -85,10 +85,11 @@ objects:
     namespace: ${NAMESPACE}
   spec:
     hosts:
-    - app.${WILDCARD_DOMAIN}
-    - app.${NAMESPACE}.svc.cluster.local
+    - app.${WILDCARD_DOMAIN} # for external routing
+    - app # for internal routing within NAMESPACE
     gateways:
-    - app-gateway
+    - app-gateway # for external routing
+    - mesh # for internal routing
     http:
     - match:
       - headers:
@@ -98,7 +99,7 @@ objects:
       - destination:
           host: app
           port:
-            number: 4040
+            number: 8080
           subset: stable
     - match:
       - headers:
@@ -108,7 +109,7 @@ objects:
       - destination:
           host: app
           port:
-            number: 4040
+            number: 8080
           subset: canary
     - match:
       - headers:
@@ -118,12 +119,12 @@ objects:
       - destination:
           host: app
           port:
-            number: 4040
+            number: 8080
           subset: stable
       mirror:
         host: app
         port:
-          number: 4040
+          number: 8080
         subset: canary
 - apiVersion: networking.istio.io/v1alpha3
   kind: DestinationRule

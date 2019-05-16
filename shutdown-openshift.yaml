@@ -16,5 +16,5 @@
   register: pods
 - name: Kill pods
   when: pods.stdout
-  command: oc delete {{ pods.stdout }} -n {{ namespace }}
+  command: oc delete {{ pods.stdout }} -n {{ namespace }} --force --grace-period=0
   failed_when: false

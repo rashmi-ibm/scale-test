@@ -41,7 +41,7 @@ phases:
           - test:
             - httpRequest:
                 GET:
-                  pattern: /proxy?p=${p}&url=app.{{ namespace }}:4040/mersenneprime?p=${p}
+                  pattern: /proxy?p=${p}&url=app.{{ namespace }}:8080/mersenneprime?p=${p}
         db: &db
           weight: 1
           scenario:
