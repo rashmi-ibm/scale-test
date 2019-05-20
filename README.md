@@ -6,6 +6,8 @@ To get this benchmark running:
 2. Login to OCP: `oc login -u system:admin`
 3. Install Istio: https://maistra.io/docs/getting_started/install/
     - In `controlplane/basic-install` set `ior_enabled: true`
+    - I suggest locating `istio-system` pods on the infra node (the same where the `default/router` resides):
+      `oc patch namespace istio-system -p '{"metadata":{"annotations":{"openshift.io/node-selector":"node-role.kubernetes.io/infra=true"}}}'`
     - I had trouble with `clusterrole istio-sidecar-injector-istio-system` - this was not correctly created and I had to fix it manually, applying:
 ```
       apiVersion: rbac.authorization.k8s.io/v1
@@ -46,14 +48,9 @@ rules:
     `ansible-playbook -i hosts.mysetup setup.yaml`
 8. There seems to be a bug in IOR (MAISTRA-356) that is not resolved in the image I use. Therefore you have
    to manually fix the generated route: `oc get route -n istio-system -l maistra.io/generated-by=ior`
-   `oc patch route -n istio-system app-gateway-xxxxx -p '{ "spec": { "port" : { "targetPort": 80 }}}'`
-9. The script generates 20% of apps marked as canary. With only few nodes make sure you have some (`oc get po -l app.variant=canary`) and update deployment as necessary. TODO: this should be probably more deterministic
-10. Start the test:
+   `oc patch route -n istio-system app-gateway-xxxxx -p '{ "spec": { "port" : { "targetPort": 443 }}}'`
+9. Start the test:
     `ansible-playbook -i hosts.mysetup test.yaml`
-
-# TODO:
-
-* HTTPS!
 
 # Hints:
 

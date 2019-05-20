@@ -4,7 +4,7 @@ agents:
   {{ agent }}: {{ hostvars[agent]['ansible_host'] }}:{{ hyperfoil_agent_port }}
 {% endfor %}
 http:
-  baseUrl: http://app.{{ wildcard_domain }}
+  baseUrl: https://app.{{ wildcard_domain }}
   sharedConnections: {{ test_shared_connections | default(100, true) }}
 phases:
 - rampUp:

@@ -54,6 +54,16 @@
     until: builds.stdout != ""
     delay: 6
     retries: 100
+  - name: Generate gateway certificates
+    command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=app.{{ wildcard_domain }}/O=app"
+  - name: Drop old certificates
+    command: oc delete secret istio-ingressgateway-certs -n istio-system
+    failed_when: false
+  - name: Apply certificates to ingressgateway
+    command: oc create -n istio-system secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt
+  # For some reason the update on gateway requires resourceVersion
+  - name: Delete old gateway
+    command: oc delete gateway app-gateway -n {{ namespace }}
   - name: Upload /tmp/routing.yaml
     copy:
       src: routing.yaml

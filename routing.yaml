@@ -17,27 +17,6 @@ parameters:
   description: Value for 'app' label on the pods.
   value: app
 objects:
-# Maistra creates route automatically when ior_enabled: true
-# - apiVersion: route.openshift.io/v1
-#   kind: Route
-#   metadata:
-#     name: istio-ingress
-#     namespace: ${ISTIO_NAMESPACE}
-#   spec:
-#     host: subdomain.${WILDCARD_DOMAIN}
-#     # istio-ingressgateway has several ports. Without specifying the port explicitly
-#     # it would loadbalance between those ports round-robin.
-#     port:
-#       targetPort: 80
-#     tls:
-#       # passthrough + allow would be better but not possible ATM
-#       termination: edge
-#       insecureEdgeTerminationPolicy: Allow
-#     to:
-#       kind: Service
-#       name: istio-ingressgateway
-#       weight: 100
-#     wildcardPolicy: Subdomain
 - apiVersion: networking.istio.io/v1alpha3
   kind: Gateway
   metadata:
@@ -47,13 +26,27 @@ objects:
     selector:
       istio: ingressgateway # use Istio default gateway implementation
     servers:
-    - port:
-        number: 80
-        name: http
-        protocol: HTTP
-      hosts:
+    - hosts:
       # Catch-all route not allowed in Maistra
       - "*.${WILDCARD_DOMAIN}"
+      port:
+        name: https
+        number: 443
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        # These keys are mounted from the secret istio-system/istio-ingressgateway-certs
+        privateKey: /etc/istio/ingressgateway-certs/tls.key
+        serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
+    # Redirect non-encrypted traffic to port 443
+    - hosts:
+      - "*.${WILDCARD_DOMAIN}"
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+      tls:
+        httpsRedirect: true
 - apiVersion: v1
   kind: Service
   metadata:
@@ -78,6 +71,8 @@ objects:
       app: ${APP_LABEL}
     sessionAffinity: None
     type: ClusterIP
+# This virtual service requires any request to have x-variant set to either
+# 'stable', 'canary' or 'mirror' (otherwise the request raturns 404)
 - apiVersion: networking.istio.io/v1alpha3
   kind: VirtualService
   metadata:
@@ -136,6 +131,11 @@ objects:
     trafficPolicy:
       loadBalancer:
         simple: RANDOM
+      portLevelSettings:
+      - port:
+          number: 8080
+        tls:
+          mode: ISTIO_MUTUAL
     subsets:
     - name: stable
       labels:
@@ -143,3 +143,24 @@ objects:
     - name: canary
       labels:
         app.variant: canary
+# Global policy requiring communication to be TLS-encrypted
+- apiVersion: authentication.istio.io/v1alpha1
+  kind: Policy
+  metadata:
+    name: default
+    namespace: ${NAMESPACE}
+  spec:
+    peers:
+    - mtls: {}
+# Exception for the policy above on DB port
+- apiVersion: authentication.istio.io/v1alpha1
+  kind: Policy
+  metadata:
+    name: app-db
+    namespace: ${NAMESPACE}
+  spec:
+    peers: []
+    targets:
+    - name: app
+      ports:
+      - number: 5432

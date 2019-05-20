@@ -35,11 +35,11 @@ test_users_per_sec=5000
 test_inc_users_per_sec=1000
 test_shared_connections=5000
 
-# test_urls=[ "http://app.istio.benchserver7.perf.lab.eng.rdu.redhat.com" ]
+# test_urls=[ "http://app.istio.benchserver7.perf.lab.eng.rdu2.redhat.com" ]
 
 app_label=app
 docker_registry=docker-registry.default.svc:5000
 pods_per_app=1
 num_apps=3
 namespace=istio-scale
-wildcard_domain=istio.benchserver7.perf.lab.eng.rdu.redhat.com
+wildcard_domain=istio.benchserver7.perf.lab.eng.rdu2.redhat.com
