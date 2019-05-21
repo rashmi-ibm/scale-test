@@ -3,7 +3,7 @@ hyperfoil-controller
 hyperfoil-agent
 
 [hyperfoil-controller]
-benchclient1
+benchclient1 ansible_host=benchclient1
 
 [hyperfoil-agent]
 benchclient1
@@ -28,7 +28,7 @@ benchserver2
 [all:vars]
 backend_node=benchserver2
 
-hyperfoil_distribution=/home/benchuser/rvansa/Hyperfoil/distribution/target/hyperfoil-0.1-SNAPSHOT.zip
+hyperfoil_distribution=/home/benchuser/rvansa/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
 test_rampup_duration=20
 test_steady_duration=20
 test_users_per_sec=5000
