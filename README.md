@@ -5,7 +5,7 @@ To get this benchmark running:
 1. Install OCP and Ansible
 2. Login to OCP: `oc login -u system:admin`
 3. Install Istio: https://maistra.io/docs/getting_started/install/
-    - In `controlplane/basic-install` set `ior_enabled: true`
+    - In `controlplane/basic-install` set `gateways.ior_enabled: true` and `mixer.telemetry.enabled: false`
     - I suggest locating `istio-system` pods on the infra node (the same where the `default/router` resides):
       `oc patch namespace istio-system -p '{"metadata":{"annotations":{"openshift.io/node-selector":"node-role.kubernetes.io/infra=true"}}}'`
     - I had trouble with `clusterrole istio-sidecar-injector-istio-system` - this was not correctly created and I had to fix it manually, applying:

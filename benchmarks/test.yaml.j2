@@ -7,7 +7,7 @@ http:
   baseUrl: https://app.{{ wildcard_domain }}
   sharedConnections: {{ test_shared_connections | default(100, true) }}
 phases:
-- rampUp:
+- initialRampUp:
     rampPerSec:
       initialUsersPerSec: 1
       targetUsersPerSec: {{ test_users_per_sec }}
@@ -72,9 +72,31 @@ phases:
         base:      {{ test_users_per_sec }}
         increment: {{ test_inc_users_per_sec }}
       maxIterations: {{ test_max_iterations | default(30, true) }}
-      startAfter: rampUp
+      startAfter:
+      - initialRampUp
+      - phase: rampUp
+        iteration: PREVIOUS
       duration: {{ test_steady_duration }}
       maxDuration: {{ test_steady_duration + 1 }}
+      maxUnfinishedSessions: {{ test_users_per_sec }}
+      forks:
+        simple: *simple
+        proxy: *proxy
+        db: *db
+- rampUp:
+    rampPerSec:
+      initialUsersPerSec:
+        base:      {{ test_users_per_sec }}
+        increment: {{ test_inc_users_per_sec }}
+      targetUsersPerSec:
+        base:      {{ test_users_per_sec + test_inc_users_per_sec}}
+        increment: {{ test_inc_users_per_sec + test_inc_users_per_sec}}
+      maxIterations: {{ test_max_iterations | default(30, true) }}
+      startAfter:
+      - phase: steadyState
+        iteration: SAME
+      duration: 5s
+      maxDuration: {{ test_rampup_duration + 1 }}
       maxUnfinishedSessions: {{ test_users_per_sec }}
       forks:
         simple: *simple
