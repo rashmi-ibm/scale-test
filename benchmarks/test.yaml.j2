@@ -6,99 +6,65 @@ agents:
 http:
   baseUrl: https://app.{{ wildcard_domain }}
   sharedConnections: {{ test_shared_connections | default(100, true) }}
-phases:
-- initialRampUp:
-    rampPerSec:
-      initialUsersPerSec: 1
-      targetUsersPerSec: {{ test_users_per_sec }}
-      duration: {{ test_rampup_duration }}
-      forks:
-        simple: &simple
-          weight: 1
-          scenario:
-          - params: &params
-            - randomInt:
-                var: p
-                min: 200
-                max: 300
-            - randomItem:
-                list:
-                  stable: 0.8
-                  canary: 0.1
-                  mirror: 0.1
+staircase:
+  initialRampUpDuration: {{ test_rampup_duration }}
+  steadyStateDuration: {{ test_steady_duration }}
+  rampUpDuration: 5s
+  initialUsersPerSec: {{ test_users_per_sec }}
+  incrementUsersPerSec: {{ test_inc_users_per_sec }}
+  maxIterations: {{ test_max_iterations | default(30, true) }}
+  maxUnfinishedSessions: {{ test_users_per_sec }}
+  forks:
+    simple: &simple
+      weight: 1
+      scenario:
+      - params: &params
+        - randomInt:
+            var: p
+            min: 200
+            max: 300
+        - randomItem:
+            list:
+              stable: 0.8
+              canary: 0.1
+              mirror: 0.1
+            var: variant
+      - test:
+        - httpRequest:
+            GET:
+              pattern: /mersenneprime?p=${p}
+            headers:
+              x-variant:
                 var: variant
-          - test:
-            - httpRequest:
-                GET:
-                  pattern: /mersenneprime?p=${p}
-                headers:
-                  x-variant:
-                    var: variant
-                sla:
-                  errorRate: 0.1
-        proxy: &proxy
-          weight: 1
-          scenario:
-          - params: *params
-          - test:
-            - httpRequest:
-                GET:
-                  pattern: /proxy?p=${p}&url=http://app:8080/mersenneprime?p=${p}
-                headers:
-                  x-variant:
-                    var: variant
-                sla:
-                  errorRate: 0.1
-        db: &db
-          weight: 1
-          scenario:
-          - params: *params
-          - test:
-            - randomInt:
-                var: size
-                min: 5
-                max: 20
-            - httpRequest:
-                GET:
-                  pattern: /db?p=${p}&host=app&size=${size}
-                headers:
-                  x-variant:
-                    var: variant
-                sla:
-                  errorRate: 0.1
-- steadyState:
-    constantPerSec:
-      usersPerSec:
-        base:      {{ test_users_per_sec }}
-        increment: {{ test_inc_users_per_sec }}
-      maxIterations: {{ test_max_iterations | default(30, true) }}
-      startAfter:
-      - initialRampUp
-      - phase: rampUp
-        iteration: PREVIOUS
-      duration: {{ test_steady_duration }}
-      maxDuration: {{ test_steady_duration + 1 }}
-      maxUnfinishedSessions: {{ test_users_per_sec }}
-      forks:
-        simple: *simple
-        proxy: *proxy
-        db: *db
-- rampUp:
-    rampPerSec:
-      initialUsersPerSec:
-        base:      {{ test_users_per_sec }}
-        increment: {{ test_inc_users_per_sec }}
-      targetUsersPerSec:
-        base:      {{ test_users_per_sec + test_inc_users_per_sec}}
-        increment: {{ test_inc_users_per_sec + test_inc_users_per_sec}}
-      maxIterations: {{ test_max_iterations | default(30, true) }}
-      startAfter:
-      - phase: steadyState
-        iteration: SAME
-      duration: 5s
-      maxDuration: {{ test_rampup_duration + 1 }}
-      maxUnfinishedSessions: {{ test_users_per_sec }}
-      forks:
-        simple: *simple
-        proxy: *proxy
-        db: *db
+            sla:
+              errorRate: 0.1
+    proxy: &proxy
+      weight: 1
+      scenario:
+      - params: *params
+      - test:
+        - httpRequest:
+            GET:
+              pattern: /proxy?p=${p}&url=http://app:8080/mersenneprime?p=${p}
+            headers:
+              x-variant:
+                var: variant
+            sla:
+              errorRate: 0.1
+    db: &db
+      weight: 1
+      scenario:
+      - params: *params
+      - test:
+        - randomInt:
+            var: size
+            min: 5
+            max: 20
+        - httpRequest:
+            GET:
+              pattern: /db?p=${p}&host=app&size=${size}
+            headers:
+              x-variant:
+                var: variant
+            sla:
+              errorRate: 0.1
