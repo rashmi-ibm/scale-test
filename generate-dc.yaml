@@ -8,9 +8,9 @@
     src: dc.yaml.j2
     dest: "{{ resources.path }}"
 - name: Apply resources
-  command: oc apply -f "{{ resources.path }}"
+  command: "{{oc}} apply -f {{ resources.path }}"
 - name: Wait for pods to come up
-  shell: oc get po -l app=={{ app_label }} -l batch==batch-{{ app_first }} -n {{ namespace }} --no-headers | grep '2/2' | wc -l
+  shell: "{{oc}} get po -l app=={{ app_label }} -l batch==batch-{{ app_first }} -n {{ namespace }} --no-headers | grep '2/2' | wc -l"
   register: ready_pods
   until: ready_pods.stdout | int == (batch_apps | int) * (pods_per_app | int)
   delay: 5

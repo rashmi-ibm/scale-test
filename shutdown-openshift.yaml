@@ -1,20 +1,20 @@
 - name: Get deployment configs
-  command: oc get dc -l app=={{ app_label }} -o name -n {{ namespace }}
+  command: "{{oc}} get dc -l app=={{ app_label }} -o name -n {{ namespace }}"
   register: dcs
 - name: Delete deployment configs
   when: dcs.stdout
-  command: oc delete {{ dcs.stdout }} -n {{ namespace }}
+  command: "{{oc}} delete {{ dcs.stdout }} -n {{ namespace }}"
 - name: Get replications controllers
-  command: oc get rc -l app=={{ app_label }} -o name -n {{ namespace }}
+  command: "{{oc}} get rc -l app=={{ app_label }} -o name -n {{ namespace }}"
   register: rcs
 - name: Kill replication controllers
   when: rcs.stdout
-  command: oc delete {{ rcs.stdout }} -n {{ namespace }}
+  command: "{{oc}} delete {{ rcs.stdout }} -n {{ namespace }}"
   failed_when: false
 - name: Get pods
-  command: oc get po -l app=={{ app_label }} -o name -n {{ namespace }}
+  command: "{{oc}} get po -l app=={{ app_label }} -o name -n {{ namespace }}"
   register: pods
 - name: Kill pods
   when: pods.stdout
-  command: oc delete {{ pods.stdout }} -n {{ namespace }} --force --grace-period=0
+  command: "{{oc}} delete {{ pods.stdout }} -n {{ namespace }} --force --grace-period=0"
   failed_when: false

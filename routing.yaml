@@ -28,7 +28,8 @@ objects:
     servers:
     - hosts:
       # Catch-all route not allowed in Maistra
-      - "*.${WILDCARD_DOMAIN}"
+      # Wildcard routes not possible in OCP 4.1
+      - "app.${WILDCARD_DOMAIN}"
       port:
         name: https
         number: 443
@@ -40,7 +41,8 @@ objects:
         serverCertificate: /etc/istio/ingressgateway-certs/tls.crt
     # Redirect non-encrypted traffic to port 443
     - hosts:
-      - "*.${WILDCARD_DOMAIN}"
+      # Wildcard routes not possible in OCP 4.1
+      - "app.${WILDCARD_DOMAIN}"
       port:
         name: http
         number: 80

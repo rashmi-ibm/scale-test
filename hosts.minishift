@@ -1,11 +1,11 @@
 [hyperfoil:children]
-hyperfoil-controller
-hyperfoil-agent
+hyperfoil_controller
+hyperfoil_agent
 
-[hyperfoil-controller]
+[hyperfoil_controller]
 localhost
 
-[hyperfoil-agent]
+[hyperfoil_agent]
 localhost ansible_host=localhost
 
 [hyperfoil:vars]

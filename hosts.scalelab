@@ -1,0 +1,48 @@
+[hyperfoil:children]
+hyperfoil_controller
+hyperfoil_agent
+
+[hyperfoil_controller]
+hfc ansible_host=f20-h22-000-r620.rdu2.scalelab.redhat.com ansible_user=root
+
+[hyperfoil_agent]
+hfa1 ansible_host=f20-h22-000-r620.rdu2.scalelab.redhat.com ansible_user=root
+
+[hyperfoil:vars]
+hyperfoil_jfr=false
+#hyperfoil_log_config=/root/log4j2-trace.xml
+#hyperfoil_log_config=/home/benchuser/rvansa/log4j2-info.xml
+#hyperfoil_controller_debug_port=0.0.0.0:5005
+#hyperfoil_agent_debug_port=0.0.0.0:5006
+#hyperfoil_agent_debug_suspend=y
+
+[openshift]
+localhost
+
+[openshift:vars]
+backend_servers=4
+backend_workers=8
+backend_cpu=8
+
+[compute]
+#tbd
+
+[all:vars]
+oc=/home/rvansa/apps/ocp4.1/oc --config=/home/rvansa/apps/ocp4.1/cloud28/auth/kubeconfig
+#backend_node=benchserver2
+
+hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
+test_rampup_duration=20
+test_steady_duration=20
+test_users_per_sec=500
+test_inc_users_per_sec=100
+test_shared_connections=5000
+
+# test_urls=[ "http://app.istio.benchserver7.perf.lab.eng.rdu2.redhat.com" ]
+
+app_label=app
+docker_registry=docker-registry.default.svc:5000
+pods_per_app=1
+num_apps=3
+namespace=istio-scale
+wildcard_domain=istio.apps.cloud28.scalelab

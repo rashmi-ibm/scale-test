@@ -1,11 +1,11 @@
 [hyperfoil:children]
-hyperfoil-controller
-hyperfoil-agent
+hyperfoil_controller
+hyperfoil_agent
 
-[hyperfoil-controller]
+[hyperfoil_controller]
 benchclient1 ansible_host=benchclient1
 
-[hyperfoil-agent]
+[hyperfoil_agent]
 benchclient1
 #benchclient2
 

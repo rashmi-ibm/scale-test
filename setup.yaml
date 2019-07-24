@@ -1,26 +1,30 @@
 - hosts: openshift
   gather_facts: false
   tasks:
+  - name: Set oc binary
+    when: oc is not defined
+    set_fact:
+      oc: "oc"
   - name: Login
     when: oc_username is defined and oc_password is defined
-    command: oc login --username={{ oc_username }} --password={{ oc_password }}
+    command: "{{oc}} login --username={{ oc_username }} --password={{ oc_password }}"
   - name: Check namespace presence
-    command: oc get project {{ namespace }}
+    command: "{{oc}} get project {{ namespace }}"
     register: ns_exists
     failed_when: false
   - name: Create namespace
     when: ns_exists.rc != 0
-    command: oc new-project {{ namespace }}
+    command: "{{oc}} new-project {{ namespace }}"
   - name: Add policy allowing privileged containers
-    command: oc adm policy add-scc-to-user privileged -z default -n {{ namespace }}
+    command: "{{oc}} adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
   - name: Switch namespace
-    command: oc project {{ namespace }}
+    command: "{{oc}} project {{ namespace }}"
     failed_when: false
   - name: Clean leftovers from previous test
     include_tasks: shutdown-openshift.yaml
     when: ns_exists.rc == 0
   - name: Check imagestream presence
-    command: oc get is mannequin
+    command: "{{oc}} get is mannequin"
     register: is_exists
     failed_when: false
   - name: Upload builders.yaml
@@ -31,25 +35,25 @@
   - name: Create builders and imagestreams
     when: is_exists.rc != 0
     shell: >
-      oc process -f /tmp/builders.yaml
+      {{oc}} process -f /tmp/builders.yaml
       -p NAMESPACE={{ namespace }}
       -p DOCKER_REGISTRY={{ docker_registry }}
-      | oc apply -f -
+      | {{oc}} apply -f -
   # This seems to fail on the first try due to concurrent modification
   # If the command fails all the time, make sure you're on VPN
   - name: Start image import
     when: is_exists.rc != 0
-    command: oc import-image openjdk18-openshift
+    command: "{{oc}} import-image openjdk18-openshift"
     register: import
     until: import.rc == 0
     delay: 1
     retries: 10
   - name: Start build
     when: is_exists.rc != 0
-    command: oc start-build mannequin-builder
+    command: "{{oc}} start-build mannequin-builder"
   - name: Wait for build to finish
     when: is_exists.rc != 0
-    command: oc get build -l buildconfig=mannequin --field-selector status==Complete
+    command: "{{oc}} get build -l buildconfig=mannequin --field-selector status==Complete"
     register: builds
     until: builds.stdout != ""
     delay: 6
@@ -57,24 +61,25 @@
   - name: Generate gateway certificates
     command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=app.{{ wildcard_domain }}/O=app"
   - name: Drop old certificates
-    command: oc delete secret istio-ingressgateway-certs -n istio-system
+    command: "{{oc}} delete secret istio-ingressgateway-certs -n istio-system"
     failed_when: false
   - name: Apply certificates to ingressgateway
-    command: oc create -n istio-system secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt
+    command: "{{oc}} create -n istio-system secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
   # For some reason the update on gateway requires resourceVersion
   - name: Delete old gateway
-    command: oc delete gateway app-gateway -n {{ namespace }}
+    command: "{{oc}} delete gateway app-gateway -n {{ namespace }}"
+    failed_when: false
   - name: Upload /tmp/routing.yaml
     copy:
       src: routing.yaml
       dest: /tmp/routing.yaml
   - name: Apply routing template
     shell: >
-      oc process -f /tmp/routing.yaml
+      {{oc}} process -f /tmp/routing.yaml
       -p NAMESPACE={{ namespace }}
       -p WILDCARD_DOMAIN={{ wildcard_domain }}
       -p APP_LABEL={{ app_label }}
-      | oc apply -f -
+      | {{oc}} apply -f -
 # When starting all the deployments concurrently sometimes things get stuck
   - name: Generate deployment configs in batches
     include_tasks: generate-dc.yaml
@@ -83,6 +88,6 @@
     loop: "{{ range(1, (num_apps | int) + 1, 10) | list }}"
     loop_control:
       loop_var: app_first
-- hosts: hyperfoil-controller
+- hosts: hyperfoil_controller
   roles:
   - hyperfoil.hyperfoil_setup

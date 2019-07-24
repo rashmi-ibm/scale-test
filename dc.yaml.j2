@@ -32,7 +32,9 @@ items:
           app.variant:  {{ app_variant }}
       spec:
         nodeSelector:
+{% if backend_node is defined %}
           kubernetes.io/hostname: {{ backend_node }}
+{% endif%}
         containers:
         - image: {{ docker_registry }}/{{ namespace }}/mannequin:latest
           imagePullPolicy: Always

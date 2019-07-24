@@ -1,4 +1,4 @@
 # Utility script when debugging Hyperfoil
-- hosts: hyperfoil-controller
+- hosts: hyperfoil_controller
   roles:
   - hyperfoil.hyperfoil_setup
