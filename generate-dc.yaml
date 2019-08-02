@@ -9,8 +9,16 @@
     dest: "{{ resources.path }}"
 - name: Apply resources
   command: "{{oc}} apply -f {{ resources.path }}"
+- name: Set expected pod pattern
+  when: use_istio
+  set_fact:
+    pod_pattern: "2/2"
+- name: Set expected pod pattern
+  when: not use_istio
+  set_fact:
+    pod_pattern: "1/1"
 - name: Wait for pods to come up
-  shell: "{{oc}} get po -l app=={{ app_label }} -l batch==batch-{{ app_first }} -n {{ namespace }} --no-headers | grep '2/2' | wc -l"
+  shell: "{{oc}} get po -l app=={{ app_label }} -l batch==batch-{{ app_first }} -n {{ namespace }} --no-headers | grep '{{ pod_pattern }}' | wc -l"
   register: ready_pods
   until: ready_pods.stdout | int == (batch_apps | int) * (pods_per_app | int)
   delay: 5

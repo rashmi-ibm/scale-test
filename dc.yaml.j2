@@ -50,6 +50,8 @@ items:
           - name: JAVA_OPTIONS
             value: >
               -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory
+              -Dvertx.options.workerPoolSize={{ backend_workers | default(20, true) }}
+              -Dmannequin.instances={{ backend_servers | default(1, true) }}
           ports:
           - containerPort: 8080
             protocol: TCP

@@ -16,6 +16,7 @@
     when: ns_exists.rc != 0
     command: "{{oc}} new-project {{ namespace }}"
   - name: Add policy allowing privileged containers
+    when: use_istio
     command: "{{oc}} adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
   - name: Switch namespace
     command: "{{oc}} project {{ namespace }}"
@@ -58,28 +59,38 @@
     until: builds.stdout != ""
     delay: 6
     retries: 100
-  - name: Generate gateway certificates
-    command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=app.{{ wildcard_domain }}/O=app"
-  - name: Drop old certificates
-    command: "{{oc}} delete secret istio-ingressgateway-certs -n istio-system"
-    failed_when: false
-  - name: Apply certificates to ingressgateway
-    command: "{{oc}} create -n istio-system secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
-  # For some reason the update on gateway requires resourceVersion
-  - name: Delete old gateway
-    command: "{{oc}} delete gateway app-gateway -n {{ namespace }}"
-    failed_when: false
-  - name: Upload /tmp/routing.yaml
-    copy:
-      src: routing.yaml
-      dest: /tmp/routing.yaml
-  - name: Apply routing template
-    shell: >
-      {{oc}} process -f /tmp/routing.yaml
-      -p NAMESPACE={{ namespace }}
-      -p WILDCARD_DOMAIN={{ wildcard_domain }}
-      -p APP_LABEL={{ app_label }}
-      | {{oc}} apply -f -
+  - name: Setup Istio routing
+    when: use_istio
+    block:
+    - name: Generate gateway certificates
+      command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=app.{{ wildcard_domain }}/O=app"
+    - name: Drop old certificates
+      command: "{{oc}} delete secret istio-ingressgateway-certs -n istio-system"
+      failed_when: false
+    - name: Apply certificates to ingressgateway
+      command: "{{oc}} create -n istio-system secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
+    # For some reason the update on gateway requires resourceVersion
+    - name: Delete old gateway
+      command: "{{oc}} delete gateway app-gateway -n {{ namespace }}"
+      failed_when: false
+    - name: Upload /tmp/routing.yaml
+      copy:
+        src: routing.yaml
+        dest: /tmp/routing.yaml
+    - name: Apply routing template
+      shell: >
+        {{oc}} process -f /tmp/routing.yaml
+        -p NAMESPACE={{ namespace }}
+        -p WILDCARD_DOMAIN={{ wildcard_domain }}
+        -p APP_LABEL={{ app_label }}
+        | {{oc}} apply -f -
+  - name: Setup native Openshift routing
+    when: not use_istio
+    block:
+    - name: Create service
+      command: "{{ oc }} create svc clusterip app --tcp 8080:8080 --tcp 5432:5432"
+    - name: Expose route
+      command: "{{ oc }} create route edge app --service=app --port=8080 --hostname=app.plain.apps.cloud28.scalelab"
 # When starting all the deployments concurrently sometimes things get stuck
   - name: Generate deployment configs in batches
     include_tasks: generate-dc.yaml

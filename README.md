@@ -42,18 +42,20 @@ rules:
    oc adm policy add-scc-to-user anyuid -z istio-galley-service-account -n istio-system
    oc adm policy add-scc-to-user anyuid -z istio-security-post-install-account -n istio-system
    ```
-5. Allow wildcard routes: `oc set env dc/router ROUTER_ALLOW_WILDCARD_ROUTES=true -n default`
+5. Allow wildcard routes: `oc set env dc/router ROUTER_ALLOW_WILDCARD_ROUTES=true -n default` (not possible in OCP 4.1)
 6. Create hosts.* according to your system
 7. Run the setup (now everything should be automatized):
     `ansible-playbook -i hosts.mysetup setup.yaml`
-8. There seems to be a bug in IOR (MAISTRA-356) that is not resolved in the image I use. Therefore you have
-   to manually fix the generated route: `oc get route -n istio-system -l maistra.io/generated-by=ior`
-   `oc patch route -n istio-system app-gateway-xxxxx -p '{ "spec": { "port" : { "targetPort": 443 }}}'`
-9. Start the test:
+8. Start the test:
     `ansible-playbook -i hosts.mysetup test.yaml`
 
-# Hints:
+## Hints:
 
 * Add `LOG_LEVEL=TRACE` do deploymentconfig env vars if you want mannequin to be logging on trace level
 * Add `global.proxy.accessLogFile: /dev/stdout` to `controlplane/basic-install` or modify directly `configmap/istio` to have access logs in `istio-proxy` containers.
 * Add `--proxyLogLevel trace` to sidecar args to get the most verbose logging from Envoy
+* Openshift router uses source balancing strategy by default. This won't work well if you're trying to scale ingress gateways - you have to edit the route and add annotation `haproxy.router.openshift.io/balance: roundrobin`
+
+## Deprecated info
+
+* There seems to be a bug in IOR (MAISTRA-356) that is not resolved in the image I use. Therefore you have to manually fix the generated route: `oc get route -n istio-system -l maistra.io/generated-by=ior` `oc patch route -n istio-system app-gateway-xxxxx -p '{ "spec": { "port" : { "targetPort": 443 }}}'`
