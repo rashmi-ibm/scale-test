@@ -6,7 +6,7 @@ metadata:
 parameters:
 - name: DOCKER_REGISTRY
   description: "Local docker registry"
-  value: docker-registry.default.svc:5000
+  value: image-registry.openshift-image-registry.svc:5000
 - name: NAMESPACE
   description: "Test namespace"
   value: istio-scale
@@ -14,15 +14,36 @@ objects:
 - apiVersion: v1
   kind: ImageStream
   metadata:
-    name: openjdk18-openshift
+    name: ubi-quarkus-native-s2i
   spec:
-    lookupPolicy:
-      local: false
     tags:
     - from:
         kind: DockerImage
-        name: registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift:latest
-      importPolicy: {}
+        name: quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1
+      name: latest
+      referencePolicy:
+        type: Local
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: mannequin-builder
+  spec:
+    tags:
+    - from:
+        kind: DockerImage
+        name: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin-builder:latest
+      name: latest
+      referencePolicy:
+        type: Source
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: mannequin
+  spec:
+    tags:
+    - from:
+        kind: DockerImage
+        name: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin:latest
       name: latest
       referencePolicy:
         type: Source
@@ -33,13 +54,10 @@ objects:
       app: mannequin
     name: mannequin-builder
   spec:
-    nodeSelector: null
     output:
       to:
         kind: ImageStreamTag
         name: mannequin-builder:latest
-    postCommit: {}
-    resources: {}
     runPolicy: Serial
     source:
       git:
@@ -49,46 +67,15 @@ objects:
       sourceStrategy:
         from:
           kind: ImageStreamTag
-          name: openjdk18-openshift:latest
+          name: ubi-quarkus-native-s2i:latest
       type: Source
     triggers:
-    - type: ConfigChange
-    - imageChange:
-        from:
-          kind: ImageStreamTag
-          name: openjdk18-openshift:latest
-      type: ImageChange
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    name: mannequin-builder
-  spec:
-    lookupPolicy:
-      local: false
-    tags:
-    - from:
-        kind: DockerImage
-        name: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin-builder:latest
-      importPolicy: {}
-      name: latest
-      referencePolicy:
-        type: Source
-- apiVersion: v1
-  kind: ImageStream
-  metadata:
-    name: mannequin
-  spec:
-    lookupPolicy:
-      local: false
-    tags:
-    - from:
-        kind: DockerImage
-        name: ${DOCKER_REGISTRY}/${NAMESPACE}/mannequin:latest
-      generation: 3
-      importPolicy: {}
-      name: latest
-      referencePolicy:
-        type: Source
+      - type: ConfigChange
+      - imageChange:
+          from:
+            kind: ImageStreamTag
+            name: ubi-quarkus-native-s2i:latest
+        type: ImageChange
 - apiVersion: v1
   kind: BuildConfig
   metadata:
@@ -96,35 +83,30 @@ objects:
       app: mannequin
     name: mannequin
   spec:
-    nodeSelector: null
     output:
       to:
         kind: ImageStreamTag
         name: mannequin:latest
-    postCommit: {}
-    resources: {}
     runPolicy: Serial
     source:
+      dockerfile: |
+        FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
+        ADD --chown=1001 /tmp/mannequin-1.0-SNAPSHOT-runner /mannequin
+        USER 1001
+        EXPOSE 8080/tcp 5432/tcp
+        ENTRYPOINT /mannequin
       images:
-      - from:
-          kind: ImageStreamTag
-          name: mannequin-builder:latest
-        paths:
-        - destinationDir: deployments
-          sourcePath: /home/jboss/target/mannequin-0.1-SNAPSHOT-fat.jar
-      type: Image
+        - from:
+            kind: ImageStreamTag
+            name: mannequin-builder:latest
+          paths:
+            - sourcePath: /tmp/src/target/mannequin-1.0-SNAPSHOT-runner
+              destinationDir: tmp
+      type: Dockerfile
     strategy:
-      sourceStrategy:
-        from:
-          kind: ImageStreamTag
-          name: openjdk18-openshift:latest
-      type: Source
+      dockerStrategy: {}
+      type: Docker
     triggers:
-    - imageChange:
-        from:
-          kind: ImageStreamTag
-          name: openjdk18-openshift:latest
-      type: ImageChange
     - type: ConfigChange
     - imageChange:
         from:

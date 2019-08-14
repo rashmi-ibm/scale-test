@@ -15,7 +15,7 @@ hyperfoil_jfr=false
 hyperfoil_log_config=/home/benchuser/rvansa/log4j2-info.xml
 
 [openshift]
-benchserver7
+benchserver2
 
 [openshift:vars]
 backend_servers=8
@@ -26,20 +26,19 @@ backend_cpu=16
 benchserver2
 
 [all:vars]
-backend_node=benchserver2
+#backend_node=benchserver2
 
-hyperfoil_distribution=/home/benchuser/rvansa/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
+hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
 test_rampup_duration=20
 test_steady_duration=20
 test_users_per_sec=5000
 test_inc_users_per_sec=1000
 test_shared_connections=5000
 
-# test_urls=[ "http://app.istio.benchserver7.perf.lab.eng.rdu2.redhat.com" ]
-
+use_istio=true
 app_label=app
-docker_registry=docker-registry.default.svc:5000
+docker_registry=image-registry.openshift-image-registry.svc:5000
 pods_per_app=1
 num_apps=3
 namespace=istio-scale
-wildcard_domain=istio.benchserver7.perf.lab.eng.rdu2.redhat.com
+wildcard_domain=istio.apps.benchcluster.perf.lab.eng.rdu2.redhat.com
