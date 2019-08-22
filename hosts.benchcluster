@@ -23,12 +23,13 @@ backend_workers=16
 backend_cpu=16
 
 [compute]
-benchserver2
+benchserver2 ansible_python_interpreter=/usr/libexec/platform-python
 
 [all:vars]
 #backend_node=benchserver2
 
-hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
+#hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
+hyperfoil_distribution=/home/wreicher/code/github/Hyperfoil/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
 test_rampup_duration=20
 test_steady_duration=20
 test_users_per_sec=5000
