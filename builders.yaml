@@ -9,8 +9,20 @@ parameters:
   value: image-registry.openshift-image-registry.svc:5000
 - name: NAMESPACE
   description: "Test namespace"
-  value: istio-scale
+  value: mannequin-test
 objects:
+- apiVersion: v1 #added because getting 'error: no image stream named "openjdk18-openshift" exists, pass --confirm to create and import' image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: openjdk18-openshift
+  spec:
+    tags:
+    - from:
+        kind: DockerImage
+        name: registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift:latest
+      name: latest
+      referencePolicy:
+        type: Local
 - apiVersion: v1
   kind: ImageStream
   metadata:
@@ -35,7 +47,7 @@ objects:
       name: latest
       referencePolicy:
         type: Source
-- apiVersion: v1
+- apiVersion: image.openshift.io/v1
   kind: ImageStream
   metadata:
     name: mannequin
@@ -66,16 +78,9 @@ objects:
     strategy:
       sourceStrategy:
         from:
-          kind: ImageStreamTag
-          name: ubi-quarkus-native-s2i:latest
+          kind: DockerImage
+          name: quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1
       type: Source
-    triggers:
-      - type: ConfigChange
-      - imageChange:
-          from:
-            kind: ImageStreamTag
-            name: ubi-quarkus-native-s2i:latest
-        type: ImageChange
 - apiVersion: v1
   kind: BuildConfig
   metadata:
@@ -95,6 +100,7 @@ objects:
         USER 1001
         EXPOSE 8080/tcp 5432/tcp
         ENTRYPOINT /mannequin
+        
       images:
         - from:
             kind: ImageStreamTag

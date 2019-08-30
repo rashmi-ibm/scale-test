@@ -41,5 +41,5 @@ app_label=app
 docker_registry=image-registry.openshift-image-registry.svc:5000
 pods_per_app=1
 num_apps=3
-namespace=istio-scale
+namespace=mannequin-test
 wildcard_domain=istio.apps.benchcluster.perf.lab.eng.rdu2.redhat.com

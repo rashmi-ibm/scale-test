@@ -9,7 +9,7 @@ parameters:
   value: istio.router.default.svc.cluster.local
 - name: NAMESPACE
   description: "Test namespace"
-  value: istio-scale
+  value: mannequin-test
 - name: ISTIO_NAMESPACE
   description: "Test namespace"
   value: istio-system

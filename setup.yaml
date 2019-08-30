@@ -42,13 +42,13 @@
       | {{oc}} apply -f -
   # This seems to fail on the first try due to concurrent modification
   # If the command fails all the time, make sure you're on VPN
-  - name: Start image import
-    when: is_exists.rc != 0
-    command: "{{oc}} import-image openjdk18-openshift"
-    register: import
-    until: import.rc == 0
-    delay: 1
-    retries: 10
+  # - name: Start image import
+  #   when: is_exists.rc != 0
+  #   command: "{{oc}} import-image openjdk18-openshift"
+  #   register: import
+  #   until: import.rc == 0
+  #   delay: 1
+  #   retries: 10
   - name: Start build
     when: is_exists.rc != 0
     command: "{{oc}} start-build mannequin-builder"

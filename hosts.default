@@ -5,5 +5,5 @@ app_label=app
 docker_registry=docker-registry.default.svc:5000
 pods_per_app=1
 num_apps=3
-namespace=istio-scale
+namespace=mannequin-test
 wildcard_domain=istio.benchserver7.perf.lab.eng.rdu.redhat.com

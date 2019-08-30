@@ -4,7 +4,7 @@
     shell: oc get po -n {{ item }} -o json | jq -r '.items[] | select(.status.conditions[] | select(.type=="Ready" and .status=="True")) | .status.containerStatuses[].containerID' | cut -c 10- | tr '\n' ' '
     register: containers
     loop:
-    - istio-scale
+    - mannequin-test
     - istio-system
   - name: Set containers
     set_fact:
