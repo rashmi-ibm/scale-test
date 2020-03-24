@@ -34,11 +34,19 @@ items:
         nodeSelector:
 {% if backend_node is defined %}
           kubernetes.io/hostname: {{ backend_node }}
+{% else %}
+          test.role: workload
 {% endif%}
         containers:
-        - image: {{ docker_registry }}/{{ namespace }}/mannequin:latest
+        - image: # Image is ignored, the value from triggers is used instead
           imagePullPolicy: Always
           name: mannequin
+{% if backend_type == "java" %}
+          command:
+          - java
+          - -jar
+          - /tmp/src/target/mannequin-1.0-SNAPSHOT-runner.jar
+{% endif %}
           env:
           - name: NAME
             valueFrom:
@@ -51,7 +59,6 @@ items:
             value: >
               -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory
               -Dvertx.options.workerPoolSize={{ backend_workers | default(20, true) }}
-              -Dmannequin.instances={{ backend_servers | default(1, true) }}
           ports:
           - containerPort: 8080
             protocol: TCP
@@ -61,7 +68,11 @@ items:
                 - curl
                 - localhost:8080/
               initialDelaySeconds: 5
-          resources: {}
+          resources:
+{% if backend_cpu %}
+            requests:
+              cpu: "{{ backend_cpu }}"
+{% endif %}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
     triggers:
@@ -71,6 +82,10 @@ items:
         containerNames: [ mannequin ]
         from:
           kind: ImageStreamTag
+{% if backend_type == "java" %}
+          name: mannequin-builder:latest
+{% else %}
           name: mannequin:latest
+{% endif %}
       type: ImageChange
 {% endfor %}

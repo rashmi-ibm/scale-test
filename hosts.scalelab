@@ -3,11 +3,12 @@ hyperfoil_controller
 hyperfoil_agent
 
 [hyperfoil_controller]
-hfc ansible_host=f20-h22-000-r620.rdu2.scalelab.redhat.com ansible_user=root
+#hfc ansible_host=f20-h22-000-r620.rdu2.scalelab.redhat.com ansible_user=root
 
 [hyperfoil_agent]
-hfa1 ansible_host=f20-h22-000-r620.rdu2.scalelab.redhat.com ansible_user=root
-hfa2 ansible_host=f20-h17-000-r620.rdu2.scalelab.redhat.com ansible_user=root
+# Both these are Intel(R) Xeon(R) CPU E5-2620 v2 @ 2.10GHz
+f03-h25-000-r620.rdu2.scalelab.redhat.com
+f03-h26-000-r620.rdu2.scalelab.redhat.com
 
 [hyperfoil:vars]
 hyperfoil_jfr=false
@@ -21,30 +22,36 @@ hyperfoil_jfr=false
 localhost
 
 [openshift:vars]
-backend_servers=4
-backend_workers=8
-backend_cpu=8
+backend_servers=8
+backend_workers=16
+backend_cpu=16
+backend_type=java
 
 [compute]
 #tbd
 
 [all:vars]
-oc=/home/rvansa/apps/ocp4.1/oc --config=/home/rvansa/apps/ocp4.1/cloud28/auth/kubeconfig
+#oc=/home/rvansa/apps/ocp4.1/oc
 #backend_node=benchserver2
 
-hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
+hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/distribution
+hyperfoil_deployer=k8s
+hyperfoil_controller_host=hyperfoil.apps.cloud.scalelab
+hyperfoil_controller_port=80
 test_rampup_duration=20
 test_steady_duration=20
-test_users_per_sec=500
-test_inc_users_per_sec=100
-test_shared_connections=5000
+test_users_per_sec=9000
+test_inc_users_per_sec=1500
+test_shared_connections=12000
 
 app_label=app
-docker_registry=docker-registry.default.svc:5000
+docker_registry=image-registry.openshift-image-registry.svc:5000
 pods_per_app=1
 num_apps=3
-use_istio=
-namespace=mannequin-test
+use_istio=true
+#namespace=mannequin-test
 #namespace=plain-scale
-wildcard_domain=istio.apps.cloud28.scalelab
-#wildcard_domain=plain.apps.cloud28.scalelab
+namespace=mesh-scale
+wildcard_domain=mesh.apps.cloud.scalelab
+#wildcard_domain=plain.apps.cloud.scalelab
+control_plane=mesh-control-plane

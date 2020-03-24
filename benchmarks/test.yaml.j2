@@ -1,10 +1,22 @@
 name: test
 agents:
 {% for agent in groups[hyperfoil_agent_group] %}
+{%   if hyperfoil_deployer == "k8s" %}
+  {{ agent }}:
+    node: {{ agent }}
+{%   else %}
   {{ agent }}: {{ hostvars[agent]['ansible_host'] }}:{{ hyperfoil_agent_port }}
+{%   endif %}
 {% endfor %}
+threads: 8
 http:
   host: https://app.{{ wildcard_domain }}
+{% if (routers | length) > 0 %}
+  addresses:
+{%   for router in routers %}
+  - {{ router }}
+{%   endfor %}
+{% endif %}
   sharedConnections: {{ test_shared_connections | default(100, true) }}
 staircase:
   initialRampUpDuration: {{ test_rampup_duration }}
@@ -13,7 +25,7 @@ staircase:
   initialUsersPerSec: {{ test_users_per_sec }}
   incrementUsersPerSec: {{ test_inc_users_per_sec }}
   maxIterations: {{ test_max_iterations | default(30, true) }}
-  maxUnfinishedSessions: {{ test_users_per_sec }}
+  maxSessions: {{ test_users_per_sec }}
   forks:
     simple: &simple
       weight: 1
@@ -32,12 +44,18 @@ staircase:
       - test:
         - httpRequest:
             GET:
-              pattern: /mersenneprime?p=${p}
+              pattern: /mersennePrime?p=${p}
             headers:
               x-variant:
                 fromVar: variant
             sla:
               errorRatio: 0.1
+            handler:
+              header:
+              - recordHeaderTime:
+                  header: x-envoy-upstream-service-time
+                  metric: simple-upstream
+                  unit: ms
     proxy: &proxy
       weight: 1
       scenario:
@@ -45,12 +63,21 @@ staircase:
       - test:
         - httpRequest:
             GET:
-              pattern: /proxy?p=${p}&url=http://app:8080/mersenneprime?p=${p}
+              pattern: /proxy?p=${p}&url=http://app:8080/mersennePrime?p=${p}
             headers:
               x-variant:
                 fromVar: variant
             sla:
               errorRatio: 0.1
+            handler:
+              header:
+              - recordHeaderTime:
+                  header: x-envoy-upstream-service-time
+                  metric: proxy-upstream
+                  unit: ms
+              - recordHeaderTime:
+                  header: x-proxy-service-time
+                  metric: proxy-downstream
     db: &db
       weight: 1
       scenario:
@@ -68,3 +95,12 @@ staircase:
                 fromVar: variant
             sla:
               errorRatio: 0.1
+            handler:
+               header:
+               - recordHeaderTime:
+                   header: x-envoy-upstream-service-time
+                   metric: db-upstream
+                   unit: ms
+               - recordHeaderTime:
+                   header: x-db-service-time
+                   metric: db-downstream

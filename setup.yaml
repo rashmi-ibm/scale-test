@@ -16,7 +16,7 @@
     when: ns_exists.rc != 0
     command: "{{oc}} new-project {{ namespace }}"
   - name: Add policy allowing privileged containers
-    when: use_istio
+    when: use_istio | bool
     command: "{{oc}} adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
   - name: Switch namespace
     command: "{{oc}} project {{ namespace }}"
@@ -42,13 +42,13 @@
       | {{oc}} apply -f -
   # This seems to fail on the first try due to concurrent modification
   # If the command fails all the time, make sure you're on VPN
-  # - name: Start image import
-  #   when: is_exists.rc != 0
-  #   command: "{{oc}} import-image openjdk18-openshift"
-  #   register: import
-  #   until: import.rc == 0
-  #   delay: 1
-  #   retries: 10
+  - name: Start image import
+    when: is_exists.rc != 0
+    command: "{{oc}} import-image openjdk18-openshift"
+    register: import
+    until: import.rc == 0
+    delay: 1
+    retries: 10
   - name: Start build
     when: is_exists.rc != 0
     command: "{{oc}} start-build mannequin-builder"
@@ -60,15 +60,15 @@
     delay: 6
     retries: 100
   - name: Setup Istio routing
-    when: use_istio
+    when: use_istio | bool
     block:
     - name: Generate gateway certificates
       command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=app.{{ wildcard_domain }}/O=app"
     - name: Drop old certificates
-      command: "{{oc}} delete secret istio-ingressgateway-certs -n istio-system"
+      command: "{{oc}} delete secret istio-ingressgateway-certs -n {{ control_plane }}"
       failed_when: false
     - name: Apply certificates to ingressgateway
-      command: "{{oc}} create -n istio-system secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
+      command: "{{oc}} create -n {{ control_plane }} secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
     # For some reason the update on gateway requires resourceVersion
     - name: Delete old gateway
       command: "{{oc}} delete gateway app-gateway -n {{ namespace }}"
@@ -85,12 +85,12 @@
         -p APP_LABEL={{ app_label }}
         | {{oc}} apply -f -
   - name: Setup native Openshift routing
-    when: not use_istio
+    when: not (use_istio | bool)
     block:
     - name: Create service
       command: "{{ oc }} create svc clusterip app --tcp 8080:8080 --tcp 5432:5432"
     - name: Expose route
-      command: "{{ oc }} create route edge app --service=app --port=8080 --hostname=app.plain.apps.cloud28.scalelab"
+      command: "{{ oc }} create route edge app --service=app --port=8080 --hostname=app.{{ wildcard_domain }}"
 # When starting all the deployments concurrently sometimes things get stuck
   - name: Generate deployment configs in batches
     include_tasks: generate-dc.yaml

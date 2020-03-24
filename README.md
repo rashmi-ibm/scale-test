@@ -59,3 +59,6 @@ rules:
 ## Deprecated info
 
 * There seems to be a bug in IOR (MAISTRA-356) that is not resolved in the image I use. Therefore you have to manually fix the generated route: `oc get route -n istio-system -l maistra.io/generated-by=ior` `oc patch route -n istio-system app-gateway-xxxxx -p '{ "spec": { "port" : { "targetPort": 443 }}}'`
+
+TODO
+oc get deployment istio-ingressgateway -o json | jq '.spec.template.spec.containers[].resources.requests={},.spec.template.spec.containers[].args += ["--proxy-concurrency", "4"]'

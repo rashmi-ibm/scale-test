@@ -1,8 +1,27 @@
 # Gather facts
 - hosts: hyperfoil
+  ignore_unreachable: true
   tasks: []
 - hosts: hyperfoil_controller
-  roles:
-  - hyperfoil.hyperfoil_test
-  vars:
-    test_name: test
+  tasks:
+  - name: Start test
+    include_role:
+      name: hyperfoil.hyperfoil_test
+    when: hyperfoil_deployer == "ssh"
+    vars:
+      test_name: test
+- hosts: localhost
+  connection: local
+  tasks:
+  - name: Find routers
+    command: "{{ oc }} get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
+    register: router_cmd
+  - name: Set routers
+    set_fact:
+      routers: "{{ router_cmd.stdout.split() }}"
+  - name: Start test
+    include_role:
+      name: hyperfoil.hyperfoil_test
+    when: hyperfoil_deployer == "k8s"
+    vars:
+      test_name: test

@@ -1,0 +1,107 @@
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  creationTimestamp: "2020-02-24T12:16:29Z"
+  generation: 15
+  labels:
+    app: envoy
+    app.kubernetes.io/component: envoy
+    app.kubernetes.io/instance: envoy
+  name: envoy
+  namespace: plain-scale
+  resourceVersion: "12480620"
+  selfLink: /apis/apps.openshift.io/v1/namespaces/plain-scale/deploymentconfigs/envoy
+  uid: f35c34c2-d113-4189-beaa-cb17a44438e8
+spec:
+  replicas: 4
+  revisionHistoryLimit: 10
+  selector:
+    deploymentconfig: envoy
+  strategy:
+    activeDeadlineSeconds: 21600
+    recreateParams:
+      timeoutSeconds: 600
+    resources: {}
+    type: Recreate
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        deploymentconfig: envoy
+    spec:
+      containers:
+      - command:
+        - envoy
+        - -c
+        - /etc/envoy/envoy.yaml
+        - --concurrency
+        - "8"
+        image: envoyproxy/envoy@sha256:8e63e2c9edbd6cb0d9f6604f1b38e28660dad16327242899652ecab19ec104b9
+        imagePullPolicy: Always
+        name: envoy
+        ports:
+        - containerPort: 10000
+          hostPort: 10000
+          protocol: TCP
+        resources:
+          requests:
+            cpu: "8"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /etc/envoy
+          name: config
+      dnsPolicy: ClusterFirst
+      hostNetwork: true
+      nodeSelector:
+        test.role: router
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: envoy
+        name: config
+  test: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - envoy
+      from:
+        kind: ImageStreamTag
+        name: envoy:latest
+        namespace: plain-scale
+      lastTriggeredImage: envoyproxy/envoy@sha256:8e63e2c9edbd6cb0d9f6604f1b38e28660dad16327242899652ecab19ec104b9
+    type: ImageChange
+status:
+  availableReplicas: 4
+  conditions:
+  - lastTransitionTime: "2020-02-24T16:10:10Z"
+    lastUpdateTime: "2020-02-24T16:10:12Z"
+    message: replication controller "envoy-14" successfully rolled out
+    reason: NewReplicationControllerAvailable
+    status: "True"
+    type: Progressing
+  - lastTransitionTime: "2020-02-24T16:10:16Z"
+    lastUpdateTime: "2020-02-24T16:10:16Z"
+    message: Deployment config has minimum availability.
+    status: "True"
+    type: Available
+  details:
+    causes:
+    - type: ConfigChange
+    message: config change
+  latestVersion: 14
+  observedGeneration: 15
+  readyReplicas: 4
+  replicas: 4
+  unavailableReplicas: 0
+  updatedReplicas: 4

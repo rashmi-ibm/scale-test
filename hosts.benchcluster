@@ -26,10 +26,12 @@ backend_cpu=16
 benchserver2 ansible_python_interpreter=/usr/libexec/platform-python
 
 [all:vars]
-#backend_node=benchserver2
+backend_node=benchserver4
 
-#hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
-hyperfoil_distribution=/home/wreicher/code/github/Hyperfoil/Hyperfoil/distribution/target/hyperfoil-0.3-SNAPSHOT.zip
+hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/distribution
+#hyperfoil_distribution=/home/wreicher/code/github/Hyperfoil/Hyperfoil/distribution/target/hyperfoil-0.4-SNAPSHOT.zip
+# hyperfoil_controller_args="-Dio.hyperfoil.deploy.timeout=120000 -Dio.hyperfoil.deployer=k8s -Dio.hyperfoil.deployer.k8s.apiserver=https://api.benchcluster.perf.lab.eng.rdu2.redhat.com:6443/ -Dio.hyperfoil.deployer.k8s.clientcert=/tmp/clientcert.pem -Dio.hyperfoil.deployer.k8s.clientkey=/tmp/clientkey.pem -Dio.hyperfoil.deployer.k8s.servercert=/tmp/servercert.pem -Dio.hyperfoil.deployer.k8s.token=eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJoeXBlcmZvaWwiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoiY29udHJvbGxlci10b2tlbi1iOG41dCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJjb250cm9sbGVyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMTUwZjgwMWYtZTVmMS0xMWU5LWEzZGUtMDYxMTExMTExMTAzIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omh5cGVyZm9pbDpjb250cm9sbGVyIn0.ehUfFTovHJR7Yci_eHiZUkZiGxudPrSSYxsFkaV6VZXWV4ujcxgxyKKdMsVAti83ktdX53L1US9dEQVNT4kYFrg_0LE1ihPbtNqrZRRzzr8gS_kKVfZepcqaFkzxJhXO7CBXeZzqNlffQqZe8UGRVUyHDFnwmzZZYD5SkXpKn1v9YgT2qcj4AKWWql-uQb9FIlufJOMuCGixREcif2GwaQ9JDxjYDSMbskcjI9Fl801H_Y2yOyo7OuHTWjGH8H-J5BOnJcTXYbK1O-K7t-EUUWxKIRqx1NFl02IUcWgA53A0JjykZBs2H7895LVa63RxSqQ7WK-ja-v6v9wi-Cj-SA"
+hyperfoil_trigger_url="http://benchserver1.perf.lab.eng.rdu2.redhat.com:8888/job/hyperfoil-run/buildWithParameters?token=thisisatokenforrunninghyperfoiljob\&delay=0sec\&"
 test_rampup_duration=20
 test_steady_duration=20
 test_users_per_sec=5000
@@ -39,7 +41,9 @@ test_shared_connections=5000
 use_istio=true
 app_label=app
 docker_registry=image-registry.openshift-image-registry.svc:5000
-pods_per_app=1
+pods_per_app=2
 num_apps=3
 namespace=mannequin-test
 wildcard_domain=istio.apps.benchcluster.perf.lab.eng.rdu2.redhat.com
+kube_api=api.benchcluster.perf.lab.eng.rdu2.redhat.com:6443
+istio_version=1.2.7

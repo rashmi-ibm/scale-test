@@ -10,11 +10,11 @@
 - name: Apply resources
   command: "{{oc}} apply -f {{ resources.path }}"
 - name: Set expected pod pattern
-  when: use_istio
+  when: use_istio | bool
   set_fact:
     pod_pattern: "2/2"
 - name: Set expected pod pattern
-  when: not use_istio
+  when: not (use_istio | bool)
   set_fact:
     pod_pattern: "1/1"
 - name: Wait for pods to come up

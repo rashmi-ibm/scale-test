@@ -1,0 +1,109 @@
+name: max
+agents:
+  f03-h25:
+    node: f03-h25-000-r620.rdu2.scalelab.redhat.com
+  f03-h26:
+    node: f03-h26-000-r620.rdu2.scalelab.redhat.com
+threads: 8
+http:
+  host: https://app.plain-scale.apps.cloud.scalelab
+  addresses:
+#  - 172.16.0.8:8443
+  - 172.16.0.9:8443
+  - 172.16.0.10:8443
+#  - 172.16.0.11
+  sharedConnections: 12000
+phases:
+- rampUp:
+    rampPerSec:
+      initialUsersPerSec: 9000
+      targetUsersPerSec: 15900
+      duration: 20s
+      maxSessions: 12000
+      forks:
+        simple: &simple
+          weight: 1
+          scenario:
+          - params: &params
+            - randomInt:
+                toVar: p
+                min: 200
+                max: 300
+            - randomItem:
+                list:
+                  stable: 0.8
+                  canary: 0.1
+                  mirror: 0.1
+                toVar: variant
+          - test:
+            - httpRequest:
+                GET:
+                  pattern: /mersennePrime?p=${p}
+                headers:
+                  x-variant:
+                    fromVar: variant
+                sla:
+                  errorRatio: 0.1
+                handler:
+                  header:
+                  - recordHeaderTime:
+                      header: x-envoy-upstream-service-time
+                      metric: simple-upstream
+                      unit: ms
+        proxy: &proxy
+          weight: 1
+          scenario:
+          - params: *params
+          - test:
+            - httpRequest:
+                GET:
+                  pattern: /proxy?p=${p}&url=http://app:8080/mersennePrime?p=${p}
+                headers:
+                  x-variant:
+                    fromVar: variant
+                sla:
+                  errorRatio: 0.1
+                handler:
+                  header:
+                  - recordHeaderTime:
+                      header: x-envoy-upstream-service-time
+                      metric: proxy-upstream
+                      unit: ms
+                  - recordHeaderTime:
+                      header: x-proxy-service-time
+                      metric: proxy-downstream
+        db: &db
+          weight: 1
+          scenario:
+          - params: *params
+          - test:
+            - randomInt:
+                toVar: size
+                min: 5
+                max: 20
+            - httpRequest:
+                GET:
+                  pattern: /db?p=${p}&host=app&size=${size}
+                headers:
+                  x-variant:
+                    fromVar: variant
+                sla:
+                  errorRatio: 0.1
+                handler:
+                   header:
+                   - recordHeaderTime:
+                       header: x-envoy-upstream-service-time
+                       metric: db-upstream
+                       unit: ms
+                   - recordHeaderTime:
+                       header: x-db-service-time
+                       metric: db-downstream
+- steadyState:
+    constantPerSec:
+      usersPerSec: 15900
+      duration: 120s
+      maxSessions: 12000
+      forks:
+        simple: *simple
+        proxy: *proxy
+        db: *db

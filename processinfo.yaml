@@ -5,7 +5,7 @@
     register: containers
     loop:
     - mannequin-test
-    - istio-system
+    - "{{ control_plane }}"
   - name: Set containers
     set_fact:
       container_ids: "{{ item.container_ids }}"
