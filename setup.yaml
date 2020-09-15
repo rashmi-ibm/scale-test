@@ -1,6 +1,9 @@
 - hosts: openshift
   gather_facts: false
   tasks:
+  - name: Set number of apps
+    set_fact:
+      num_apps: "{{ (num_dc | int) / 5 }}"
   - name: Set oc binary
     when: oc is not defined
     set_fact:
@@ -15,55 +18,70 @@
   - name: Create namespace
     when: ns_exists.rc != 0
     command: "{{oc}} new-project {{ namespace }}"
-  - name: Add policy allowing privileged containers
-    when: use_istio | bool
-    command: "{{oc}} adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
+  # - name: Add policy allowing privileged containers
+  #   when: use_istio | bool
+  #   command: "{{oc}} adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
   - name: Switch namespace
     command: "{{oc}} project {{ namespace }}"
     failed_when: false
   - name: Clean leftovers from previous test
     include_tasks: shutdown-openshift.yaml
     when: ns_exists.rc == 0
-  - name: Check imagestream presence
-    command: "{{oc}} get is mannequin"
-    register: is_exists
-    failed_when: false
-  - name: Upload builders.yaml
-    when: is_exists.rc != 0
-    copy:
-      src: builders.yaml
-      dest: /tmp/builders.yaml
-  - name: Create builders and imagestreams
-    when: is_exists.rc != 0
-    shell: >
-      {{oc}} process -f /tmp/builders.yaml
-      -p NAMESPACE={{ namespace }}
-      -p DOCKER_REGISTRY={{ docker_registry }}
-      | {{oc}} apply -f -
+  # - name: Check imagestream presence
+  #   command: "{{oc}} get is mannequin"
+  #   register: is_exists
+  #   failed_when: false
+  # - name: Upload builders.yaml
+  #   when: is_exists.rc != 0
+  #   copy:
+  #     src: builders.yaml
+  #     dest: /tmp/builders.yaml
+  # - name: Create builders and imagestreams
+  #   when: is_exists.rc != 0
+  #   shell: >
+  #     {{oc}} process -f /tmp/builders.yaml
+  #     -p NAMESPACE={{ namespace }}
+  #     -p DOCKER_REGISTRY={{ docker_registry }}
+  #     | {{oc}} apply -f -
   # This seems to fail on the first try due to concurrent modification
   # If the command fails all the time, make sure you're on VPN
-  - name: Start image import
-    when: is_exists.rc != 0
-    command: "{{oc}} import-image openjdk18-openshift"
-    register: import
-    until: import.rc == 0
-    delay: 1
-    retries: 10
-  - name: Start build
-    when: is_exists.rc != 0
-    command: "{{oc}} start-build mannequin-builder"
-  - name: Wait for build to finish
-    when: is_exists.rc != 0
-    command: "{{oc}} get build -l buildconfig=mannequin --field-selector status==Complete"
-    register: builds
-    until: builds.stdout != ""
-    delay: 6
-    retries: 100
+  # - name: Start image import
+  #   when: is_exists.rc != 0
+  #   command: "{{oc}} import-image openjdk18-openshift"
+  #   register: image_import
+  #   until: image_import.rc == 0
+  #   delay: 1
+  #   retries: 10
+  # - name: Start build
+  #   when: is_exists.rc != 0
+  #   command: "{{oc}} start-build mannequin-builder"
+  # - name: Wait for build to finish
+  #   when: is_exists.rc != 0
+  #   command: "{{oc}} get build -l buildconfig=mannequin-builder --field-selector status==Complete"
+  #   register: builds
+  #   until: builds.stdout != ""
+  #   delay: 6
+  #   retries: 100
+  - name: Get temporary services files
+    tempfile:
+      prefix: services-
+      suffix: .yaml
+    register: services
+  - name: Generate services CRs
+    template:
+      src: services.yaml.j2
+      dest: "{{ services.path }}"
+  - name: Apply services
+    command: "{{oc}} apply -f {{ services.path }}"
+  - name: Drop temporary services file
+    file:
+      path: "{{ services.path }}"
+      state: absent
   - name: Setup Istio routing
     when: use_istio | bool
     block:
     - name: Generate gateway certificates
-      command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=app.{{ wildcard_domain }}/O=app"
+      command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=*.{{ wildcard_domain }}/O=app"
     - name: Drop old certificates
       command: "{{oc}} delete secret istio-ingressgateway-certs -n {{ control_plane }}"
       failed_when: false
@@ -73,32 +91,47 @@
     - name: Delete old gateway
       command: "{{oc}} delete gateway app-gateway -n {{ namespace }}"
       failed_when: false
-    - name: Upload /tmp/routing.yaml
-      copy:
-        src: routing.yaml
-        dest: /tmp/routing.yaml
-    - name: Apply routing template
-      shell: >
-        {{oc}} process -f /tmp/routing.yaml
-        -p NAMESPACE={{ namespace }}
-        -p WILDCARD_DOMAIN={{ wildcard_domain }}
-        -p APP_LABEL={{ app_label }}
-        | {{oc}} apply -f -
+    - name: Get temporary routing files
+      tempfile:
+        prefix: routing-
+        suffix: .yaml
+      register: routing
+    - name: Generate routing CRs
+      template:
+        src: routing.yaml.j2
+        dest: "{{ routing.path }}"
+    - name: Apply routing
+      command: "{{oc}} apply -f {{ routing.path }}"
+    - name: Drop temporary routing file
+      file:
+        path: "{{ routing.path }}"
+        state: absent
+    - name: Create passthrough routes
+      when: control_plane != "mesh-control-plane"
+      block:
+      - name: Drop existing routes
+        command: "{{ oc }} delete route --all -n {{ control_plane }}"
+        failed_when: false
+      - name: Expose route
+        command: "{{ oc }} create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
+        loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
   - name: Setup native Openshift routing
     when: not (use_istio | bool)
     block:
-    - name: Create service
-      command: "{{ oc }} create svc clusterip app --tcp 8080:8080 --tcp 5432:5432"
+    - name: Drop existing routes
+      command: "{{ oc }} delete route --all -n {{ namespace }}"
+      failed_when: false
     - name: Expose route
-      command: "{{ oc }} create route edge app --service=app --port=8080 --hostname=app.{{ wildcard_domain }}"
+      command: "{{ oc }} create route reencrypt app-{{ item }} --cert=/home/rvansa/workspace/mannequin/src/main/resources/domain.crt --key=/home/rvansa/workspace/mannequin/src/main/resources/domain.key --service=app-{{ item }} --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
+      loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
 # When starting all the deployments concurrently sometimes things get stuck
   - name: Generate deployment configs in batches
     include_tasks: generate-dc.yaml
     vars:
-      batch_apps: "{{ [ (num_apps | int) - app_first + 1, 10 ] | min }}"
-    loop: "{{ range(1, (num_apps | int) + 1, 10) | list }}"
+      batch_dcs: "{{ [ (num_dc | int) - dc_first + 1, batch_size ] | min }}"
+    loop: "{{ range(1, (num_dc | int) + 1, batch_size) | list }}"
     loop_control:
-      loop_var: app_first
+      loop_var: dc_first
 - hosts: hyperfoil_controller
   roles:
   - hyperfoil.hyperfoil_setup

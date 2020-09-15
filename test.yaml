@@ -13,15 +13,69 @@
 - hosts: localhost
   connection: local
   tasks:
+  - set_fact:
+      num_apps: "{{ (num_dc | int) // 5 }}"
+      endpoint_port: 443
   - name: Find routers
     command: "{{ oc }} get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
     register: router_cmd
   - name: Set routers
     set_fact:
-      routers: "{{ router_cmd.stdout.split() }}"
+      endpoints: "{{ router_cmd.stdout.split() }}"
+      num_routers: "{{ router_cmd.stdout.split() | length }}"
+  # - name: Find services
+  #   command: "{{ oc }} get svc -n {{ namespace }} -o jsonpath='{.items[*].spec.clusterIP}'"
+  #   register: svc_cmd
+  # - name: Set endpoints
+  #   set_fact:
+  #     endpoints: "{{ svc_cmd.stdout.split() }}"
+  #     num_routers: 0
+  - name: Find workload nodes
+    shell: "{{ oc }} get node -l test.role=workload -o json | jq -r '.items[].metadata.name'"
+    register: workload_cmd
+  - name: Get workload pod count
+    loop: "{{ workload_cmd.stdout.split() }}"
+    shell: "{{ oc }} get pod -n {{ namespace }} --field-selector=spec.nodeName={{item}},status.phase=Running -o json | jq '.items | length'"
+    register: workload_counts
+  - name: Calculate pod count difference
+    set_fact:
+      min_pods: "{{ workload_counts.results | map(attribute='stdout') | list | min }}"
+      max_pods: "{{ workload_counts.results | map(attribute='stdout') | list | max }}"
+      total_pods: "{{ workload_counts.results | map(attribute='stdout') | list | map('int') | sum }}"
+  - name: Test total number of pods
+    when: "(total_pods | int) != (num_dc | int) * (pods_per_dc | int)"
+    fail:
+      msg: "Incorrect number of pods: expected {{ (num_dc | int) * (pods_per_dc | int) }} found {{ total_pods }}"
+  - name: Test difference
+    when: "(max_pods | int) - (min_pods | int) > 1"
+    fail:
+      msg: "Unbalanced pods: min = {{ min_pods }}, max = {{ max_pods }} "
+  - name: Get number of ingress gateways
+    shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o json | jq '.items | length'"
+    register: gateway_cmd
+  - set_fact:
+      num_gateways: "{{ gateway_cmd.stdout }}"
+  # - name: Get ingress gateways
+  #   when: control_plane is defined
+  #   shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o jsonpath='{.items[*].status.podIP}'"
+  #   register: gateway_cmd
+  # - when: control_plane is defined
+  #   set_fact:
+  #     endpoints: "{{ gateway_cmd.stdout.split() }}"
+  #     num_gateways: "{{ gateway_cmd.stdout.split() | length }}"
+  #     num_routers: 0
+  - when: control_plane is not defined
+    set_fact:
+      num_gateways: 0
+  - name: Get number of virtual services
+    shell: "{{ oc }} get vs -n {{ namespace }} -o json | jq '.items | length'"
+    register: virtualservices
   - name: Start test
     include_role:
       name: hyperfoil.hyperfoil_test
     when: hyperfoil_deployer == "k8s"
     vars:
-      test_name: test
+      run_description: "{{ backend_type }}%20R%3D{{ num_routers }}%20G%3D{{ num_gateways }}%20P%3D{{ total_pods }}%20VS%3D{{ virtualservices.stdout }}"
+  - name: Show run ID
+    debug:
+      msg: "Run ID was {{ test_runid }}"

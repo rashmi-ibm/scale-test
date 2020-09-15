@@ -1,9 +1,8 @@
 localhost
 
 [all:vars]
-app_label=app
 docker_registry=docker-registry.default.svc:5000
-pods_per_app=1
-num_apps=3
+pods_per_dc=1
+num_dc=3
 namespace=mannequin-test
 wildcard_domain=istio.benchserver7.perf.lab.eng.rdu.redhat.com

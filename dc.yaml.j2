@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: List
 items:
-{% for index in range(app_first | int, app_first | int + batch_apps | int) %}
+{% for index in range(dc_first | int, dc_first | int + batch_dcs | int) %}
 {%   if index % 5 == 1 %}
 {%     set app_variant = "canary" %}
 {%   else %}
@@ -11,11 +11,11 @@ items:
   kind: DeploymentConfig
   metadata:
     labels:
-      app: {{ app_label }}
+      app: scale-test
     name: app-{{ index }}
     namespace: {{ namespace }}
   spec:
-    replicas: {{ pods_per_app }}
+    replicas: {{ pods_per_dc }}
     strategy:
       type: Recreate
     template:
@@ -26,9 +26,10 @@ items:
         annotations:
           sidecar.istio.io/inject: "true"
         labels:
-          app: {{ app_label }}
-          batch: "batch-{{ app_first }}"
+          app: scale-test
+          batch: "batch-{{ dc_first }}"
           deploymentconfig: app-{{ index }}
+          app.index: application-{{ (index + 4) // 5 }}
           app.variant:  {{ app_variant }}
       spec:
         nodeSelector:
@@ -37,15 +38,44 @@ items:
 {% else %}
           test.role: workload
 {% endif%}
+        topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: workload
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: scale-test
         containers:
-        - image: # Image is ignored, the value from triggers is used instead
+{% if backend_type == "java" %}
+        - image: quay.io/rvansa/mannequin:jvm-latest
+{% endif %}
+{% if backend_type == "native" %}
+        - image: quay.io/rvansa/mannequin:native
+{% endif %}
           imagePullPolicy: Always
           name: mannequin
 {% if backend_type == "java" %}
           command:
           - java
+          - -Dquarkus.vertx.event-loops-pool-size=1
+          - -Dquarkus.vertx.internal-blocking-pool-size=1
+          - -Dquarkus.vertx.worker-pool-size=1
+          - -Dquarkus.http.io-threads=1
+          - -Dquarkus.thread-pool.core-threads=1
+          - -Dquarkus.http.ssl.certificate.file=/var/certs/tls.crt
+          - -Dquarkus.http.ssl.certificate.key-file=/var/certs/tls.key
           - -jar
-          - /tmp/src/target/mannequin-1.0-SNAPSHOT-runner.jar
+          - /deployments/app.jar
+{% endif %}
+{% if backend_type == "native" %}
+          args:
+          - -Dquarkus.vertx.event-loops-pool-size=1
+          - -Dquarkus.vertx.internal-blocking-pool-size=1
+          - -Dquarkus.vertx.worker-pool-size=1
+          - -Dquarkus.http.io-threads=1
+          - -Dquarkus.thread-pool.core-threads=1
+          - -Dquarkus.http.ssl.certificate.file=/var/certs/tls.crt
+          - -Dquarkus.http.ssl.certificate.key-file=/var/certs/tls.key
 {% endif %}
           env:
           - name: NAME
@@ -69,23 +99,19 @@ items:
                 - localhost:8080/
               initialDelaySeconds: 5
           resources:
-{% if backend_cpu %}
+{% if backend_cpu is defined %}
             requests:
               cpu: "{{ backend_cpu }}"
 {% endif %}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
+          volumeMounts:
+          - name: certs
+            mountPath: /var/certs
+        volumes:
+        - name: certs
+          secret:
+            secretName: app-{{ (index + 4) // 5 }}
     triggers:
     - type: ConfigChange
-    - imageChangeParams:
-        automatic: true
-        containerNames: [ mannequin ]
-        from:
-          kind: ImageStreamTag
-{% if backend_type == "java" %}
-          name: mannequin-builder:latest
-{% else %}
-          name: mannequin:latest
-{% endif %}
-      type: ImageChange
 {% endfor %}

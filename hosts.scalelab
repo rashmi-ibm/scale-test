@@ -7,8 +7,10 @@ hyperfoil_agent
 
 [hyperfoil_agent]
 # Both these are Intel(R) Xeon(R) CPU E5-2620 v2 @ 2.10GHz
-f03-h25-000-r620.rdu2.scalelab.redhat.com
-f03-h26-000-r620.rdu2.scalelab.redhat.com
+#f03-h25-000-r620.rdu2.scalelab.redhat.com
+#f03-h26-000-r620.rdu2.scalelab.redhat.com
+worker010
+worker011
 
 [hyperfoil:vars]
 hyperfoil_jfr=false
@@ -22,36 +24,44 @@ hyperfoil_jfr=false
 localhost
 
 [openshift:vars]
-backend_servers=8
-backend_workers=16
-backend_cpu=16
+#backend_servers=8
+#backend_workers=16
+backend_cpu=300m
 backend_type=java
 
 [compute]
 #tbd
 
 [all:vars]
-#oc=/home/rvansa/apps/ocp4.1/oc
+oc=/home/rvansa/apps/ocp4.1/oc
 #backend_node=benchserver2
 
 hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/distribution
 hyperfoil_deployer=k8s
-hyperfoil_controller_host=hyperfoil.apps.cloud.scalelab
+hyperfoil_controller_host=hyperfoil.apps.ocp.scalelab
 hyperfoil_controller_port=80
-test_rampup_duration=20
-test_steady_duration=20
-test_users_per_sec=9000
+test_rampup_duration=120
+test_steady_duration=60
+test_name=closedmodel
+# For open-model
+test_users_per_sec=4500
 test_inc_users_per_sec=1500
-test_shared_connections=12000
+# For closed-model
+test_concurrent_users=1050
 
-app_label=app
+test_shared_connections=2300
+
 docker_registry=image-registry.openshift-image-registry.svc:5000
-pods_per_app=1
-num_apps=3
+pods_per_dc=1
+num_dc=10
+batch_size=1000
 use_istio=true
-#namespace=mannequin-test
+#use_istio=false
 #namespace=plain-scale
-namespace=mesh-scale
-wildcard_domain=mesh.apps.cloud.scalelab
-#wildcard_domain=plain.apps.cloud.scalelab
-control_plane=mesh-control-plane
+#namespace=mesh-scale
+namespace=istio-scale
+#wildcard_domain=mesh.apps.ocp.scalelab
+wildcard_domain=istio.apps.ocp.scalelab
+#wildcard_domain=plain.apps.ocp.scalelab
+#control_plane=mesh-control-plane
+control_plane=istio-system

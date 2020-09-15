@@ -39,10 +39,9 @@ test_inc_users_per_sec=1000
 test_shared_connections=5000
 
 use_istio=true
-app_label=app
 docker_registry=image-registry.openshift-image-registry.svc:5000
-pods_per_app=2
-num_apps=3
+pods_per_dc=2
+num_dc=3
 namespace=mannequin-test
 wildcard_domain=istio.apps.benchcluster.perf.lab.eng.rdu2.redhat.com
 kube_api=api.benchcluster.perf.lab.eng.rdu2.redhat.com:6443
