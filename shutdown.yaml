@@ -1,6 +1,0 @@
-- hosts: hyperfoil
-  roles:
-  - hyperfoil.hyperfoil_shutdown
-- hosts: openshift
-  tasks:
-  - include_tasks: shutdown-openshift.yaml

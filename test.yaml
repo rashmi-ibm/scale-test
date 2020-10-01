@@ -15,21 +15,6 @@
   tasks:
   - set_fact:
       num_apps: "{{ (num_dc | int) // 5 }}"
-      endpoint_port: 443
-  - name: Find routers
-    command: "{{ oc }} get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
-    register: router_cmd
-  - name: Set routers
-    set_fact:
-      endpoints: "{{ router_cmd.stdout.split() }}"
-      num_routers: "{{ router_cmd.stdout.split() | length }}"
-  # - name: Find services
-  #   command: "{{ oc }} get svc -n {{ namespace }} -o jsonpath='{.items[*].spec.clusterIP}'"
-  #   register: svc_cmd
-  # - name: Set endpoints
-  #   set_fact:
-  #     endpoints: "{{ svc_cmd.stdout.split() }}"
-  #     num_routers: 0
   - name: Find workload nodes
     shell: "{{ oc }} get node -l test.role=workload -o json | jq -r '.items[].metadata.name'"
     register: workload_cmd
@@ -50,23 +35,42 @@
     when: "(max_pods | int) - (min_pods | int) > 1"
     fail:
       msg: "Unbalanced pods: min = {{ min_pods }}, max = {{ max_pods }} "
-  - name: Get number of ingress gateways
-    shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o json | jq '.items | length'"
-    register: gateway_cmd
-  - set_fact:
-      num_gateways: "{{ gateway_cmd.stdout }}"
-  # - name: Get ingress gateways
-  #   when: control_plane is defined
-  #   shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o jsonpath='{.items[*].status.podIP}'"
-  #   register: gateway_cmd
-  # - when: control_plane is defined
-  #   set_fact:
-  #     endpoints: "{{ gateway_cmd.stdout.split() }}"
-  #     num_gateways: "{{ gateway_cmd.stdout.split() | length }}"
-  #     num_routers: 0
-  - when: control_plane is not defined
-    set_fact:
-      num_gateways: 0
+  - when: target == 'routers'
+    block:
+    - name: Find routers
+      command: "{{ oc }} get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
+      register: router_cmd
+    - name: Get number of ingress gateways
+      shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o json | jq '.items | length'"
+      register: gateway_cmd
+    - name: Set routers
+      set_fact:
+        endpoints: "{{ router_cmd.stdout.split() }}"
+        num_routers: "{{ router_cmd.stdout.split() | length }}"
+        endpoint_port: 443
+        num_gateways: "{{ gateway_cmd.stdout }}"
+  - when: target == 'gateways'
+    block:
+    - name: Get ingress gateways
+      shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o jsonpath='{.items[*].status.podIP}'"
+      register: gateway_cmd
+    - set_fact:
+        endpoints: "{{ gateway_cmd.stdout.split() }}"
+        num_gateways: "{{ gateway_cmd.stdout.split() | length }}"
+        num_routers: 0
+        endpoint_port: "{{ gateway_port }}"
+  - when: target == 'services'
+    block:
+    - name: Find services
+      command: "{{ oc }} get svc -n {{ namespace }} -o jsonpath='{.items[*].spec.clusterIP}'"
+      register: svc_cmd
+    - name: Set endpoints
+      set_fact:
+        endpoints: "{{ svc_cmd.stdout.split() }}"
+        num_routers: 0
+        num_gateways: 0
+        endpoint_port: 8443
+
   - name: Get number of virtual services
     shell: "{{ oc }} get vs -n {{ namespace }} -o json | jq '.items | length'"
     register: virtualservices
@@ -75,7 +79,7 @@
       name: hyperfoil.hyperfoil_test
     when: hyperfoil_deployer == "k8s"
     vars:
-      run_description: "{{ backend_type }}%20R%3D{{ num_routers }}%20G%3D{{ num_gateways }}%20P%3D{{ total_pods }}%20VS%3D{{ virtualservices.stdout }}"
+      run_description: "{{ namespace }}%20R%3D{{ num_routers }}%20G%3D{{ num_gateways }}%20P%3D{{ total_pods }}%20VS%3D{{ virtualservices.stdout }}"
   - name: Show run ID
     debug:
       msg: "Run ID was {{ test_runid }}"

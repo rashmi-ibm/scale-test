@@ -66,19 +66,21 @@ items:
     trafficPolicy:
       loadBalancer:
         simple: RANDOM
-      connectionPool:
-        http:
-          http1MaxPendingRequests: 10000
-          http2MaxRequests: 10000
-        tcp:
-          maxConnections: 10000
       portLevelSettings:
       - port:
           number: 8080
         tls:
           mode: ISTIO_MUTUAL
-        # It seems that defining port-level settings sets the connection pool
-        # settings to default values, so we need to repeat it here.
+        connectionPool:
+          http:
+            http1MaxPendingRequests: 10000
+            http2MaxRequests: 10000
+          tcp:
+            maxConnections: 10000
+      - port:
+          number: 5432
+        tls:
+          mode: DISABLE
         connectionPool:
           http:
             http1MaxPendingRequests: 10000
@@ -131,7 +133,7 @@ items:
         protocol: HTTP
       tls:
         httpsRedirect: true
-{% if control_plane == "mesh-control-plane" %}
+{% if policy_version == "old" %}
 # Global policy requiring communication to be TLS-encrypted
 - apiVersion: authentication.istio.io/v1alpha1
   kind: Policy

@@ -25,43 +25,8 @@
     command: "{{oc}} project {{ namespace }}"
     failed_when: false
   - name: Clean leftovers from previous test
-    include_tasks: shutdown-openshift.yaml
+    include_tasks: delete-resources.yaml
     when: ns_exists.rc == 0
-  # - name: Check imagestream presence
-  #   command: "{{oc}} get is mannequin"
-  #   register: is_exists
-  #   failed_when: false
-  # - name: Upload builders.yaml
-  #   when: is_exists.rc != 0
-  #   copy:
-  #     src: builders.yaml
-  #     dest: /tmp/builders.yaml
-  # - name: Create builders and imagestreams
-  #   when: is_exists.rc != 0
-  #   shell: >
-  #     {{oc}} process -f /tmp/builders.yaml
-  #     -p NAMESPACE={{ namespace }}
-  #     -p DOCKER_REGISTRY={{ docker_registry }}
-  #     | {{oc}} apply -f -
-  # This seems to fail on the first try due to concurrent modification
-  # If the command fails all the time, make sure you're on VPN
-  # - name: Start image import
-  #   when: is_exists.rc != 0
-  #   command: "{{oc}} import-image openjdk18-openshift"
-  #   register: image_import
-  #   until: image_import.rc == 0
-  #   delay: 1
-  #   retries: 10
-  # - name: Start build
-  #   when: is_exists.rc != 0
-  #   command: "{{oc}} start-build mannequin-builder"
-  # - name: Wait for build to finish
-  #   when: is_exists.rc != 0
-  #   command: "{{oc}} get build -l buildconfig=mannequin-builder --field-selector status==Complete"
-  #   register: builds
-  #   until: builds.stdout != ""
-  #   delay: 6
-  #   retries: 100
   - name: Get temporary services files
     tempfile:
       prefix: services-
@@ -107,13 +72,13 @@
         path: "{{ routing.path }}"
         state: absent
     - name: Create passthrough routes
-      when: control_plane != "mesh-control-plane"
+      when: control_plane == 'istio-system' and target == 'routers'
       block:
       - name: Drop existing routes
         command: "{{ oc }} delete route --all -n {{ control_plane }}"
         failed_when: false
       - name: Expose route
-        command: "{{ oc }} create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
+        command: "{{ oc }} create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port={{ gateway_port }} --hostname=app-{{ item }}.{{ wildcard_domain }}"
         loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
   - name: Setup native Openshift routing
     when: not (use_istio | bool)

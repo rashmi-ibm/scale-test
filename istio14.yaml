@@ -1,0 +1,70 @@
+apiVersion: install.istio.io/v1alpha2
+kind: IstioControlPlane
+spec:
+  profile: default
+  autoInjection:
+    components:
+      injector:
+        enabled: true
+    enabled: true
+  cni:
+    enabled: true
+    components:
+      cni:
+        namespace: kube-system
+  gateways:
+    components:
+      egressGateway:
+        enabled: false
+      ingressGateway:
+        enabled: true
+        k8s:
+          resources:
+            limits:
+              cpu: "56"
+              memory: 8Gi
+            requests:
+              cpu: "16"
+              memory: 2Gi
+    enabled: true
+  policy:
+    components:
+      policy:
+        enabled: false
+    enabled: false
+  telemetry:
+    components:
+      telemetry:
+        enabled: false
+    enabled: false
+  values:
+    cni:
+      cniBinDir: /var/lib/cni/bin
+      cniConfDir: /etc/cni/multus/net.d
+      # cniConfFileName: istio-cni.conf
+      chained: false
+      excludeNamespaces:
+       - istio-system
+       - kube-system
+      logLevel: debug
+    sidecarInjectorWebhook:
+      injectedAnnotations:
+        k8s.v1.cni.cncf.io/networks: istio-cni
+    gateways:
+      istio-ingressgateway:
+        autoscaleEnabled: false
+    global:
+      enableTracing: false
+      mtls:
+        auto: false
+        enabled: true
+      proxy:
+        autoInject: disabled
+        concurrency: 2
+        resources:
+          limits:
+            cpu: "16"
+            memory: 2Gi
+          requests:
+            cpu: 100m
+            memory: 128Mi
