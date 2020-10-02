@@ -16,11 +16,11 @@
   - set_fact:
       num_apps: "{{ (num_dc | int) // 5 }}"
   - name: Find workload nodes
-    shell: "{{ oc }} get node -l test.role=workload -o json | jq -r '.items[].metadata.name'"
+    shell: "oc get node -l test.role=workload -o json | jq -r '.items[].metadata.name'"
     register: workload_cmd
   - name: Get workload pod count
     loop: "{{ workload_cmd.stdout.split() }}"
-    shell: "{{ oc }} get pod -n {{ namespace }} --field-selector=spec.nodeName={{item}},status.phase=Running -o json | jq '.items | length'"
+    shell: "oc get pod -n {{ namespace }} --field-selector=spec.nodeName={{item}},status.phase=Running -o json | jq '.items | length'"
     register: workload_counts
   - name: Calculate pod count difference
     set_fact:
@@ -38,10 +38,10 @@
   - when: target == 'routers'
     block:
     - name: Find routers
-      command: "{{ oc }} get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
+      command: "oc get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
       register: router_cmd
     - name: Get number of ingress gateways
-      shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o json | jq '.items | length'"
+      shell: "oc get po -n {{ control_plane }} -l istio=ingressgateway -o json | jq '.items | length'"
       register: gateway_cmd
     - name: Set routers
       set_fact:
@@ -52,7 +52,7 @@
   - when: target == 'gateways'
     block:
     - name: Get ingress gateways
-      shell: "{{ oc }} get po -n {{ control_plane }} -l istio=ingressgateway -o jsonpath='{.items[*].status.podIP}'"
+      shell: "oc get po -n {{ control_plane }} -l istio=ingressgateway -o jsonpath='{.items[*].status.podIP}'"
       register: gateway_cmd
     - set_fact:
         endpoints: "{{ gateway_cmd.stdout.split() }}"
@@ -62,7 +62,7 @@
   - when: target == 'services'
     block:
     - name: Find services
-      command: "{{ oc }} get svc -n {{ namespace }} -o jsonpath='{.items[*].spec.clusterIP}'"
+      command: "oc get svc -n {{ namespace }} -o jsonpath='{.items[*].spec.clusterIP}'"
       register: svc_cmd
     - name: Set endpoints
       set_fact:
@@ -72,7 +72,7 @@
         endpoint_port: 8443
 
   - name: Get number of virtual services
-    shell: "{{ oc }} get vs -n {{ namespace }} -o json | jq '.items | length'"
+    shell: "oc get vs -n {{ namespace }} -o json | jq '.items | length'"
     register: virtualservices
   - name: Start test
     include_role:

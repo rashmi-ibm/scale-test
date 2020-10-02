@@ -1,6 +1,6 @@
 - name: Get bearer token
   when: oc_token is undefined
-  command: "{{ oc }} whoami -t"
+  command: "oc whoami -t"
   register: oc_whoami
 - name: Set bearer token fact
   when: oc_token is undefined
@@ -8,6 +8,6 @@
     oc_token: "{{ oc_whoami.stdout }}"
 - name: Get rid of finalizers
   shell: >
-    {{ oc }} get ns {{ namespace }} -o json | jq '.spec.finalizers=[]' |
+    oc get ns {{ namespace }} -o json | jq '.spec.finalizers=[]' |
     curl -k -H "Content-Type: application/json" -H "authorization: Bearer {{ oc_token }}" -X PUT
     --data-binary @- https://{{ kube_api }}/api/v1/namespaces/{{ namespace }}/finalize

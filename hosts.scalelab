@@ -33,7 +33,6 @@ backend_type=java
 #tbd
 
 [all:vars]
-oc=/home/rvansa/apps/ocp4.1/oc
 #backend_node=benchserver2
 
 hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/distribution

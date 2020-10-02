@@ -8,7 +8,7 @@
     src: dc.yaml.j2
     dest: "{{ resources.path }}"
 - name: Apply resources
-  command: "{{oc}} apply -f {{ resources.path }}"
+  command: "oc apply -f {{ resources.path }}"
 - name: Set expected pod pattern
   when: use_istio | bool
   set_fact:
@@ -18,7 +18,7 @@
   set_fact:
     pod_pattern: "1/1"
 - name: Wait for pods to come up
-  shell: "{{oc}} get po -l app==scale-test -l batch==batch-{{ dc_first }} -n {{ namespace }} --no-headers | grep '{{ pod_pattern }}' | wc -l"
+  shell: "oc get po -l app==scale-test -l batch==batch-{{ dc_first }} -n {{ namespace }} --no-headers | grep '{{ pod_pattern }}' | wc -l"
   register: ready_pods
   until: ready_pods.stdout | int == (batch_dcs | int) * (pods_per_dc | int)
   delay: 5

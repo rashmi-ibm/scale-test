@@ -4,25 +4,21 @@
   - name: Set number of apps
     set_fact:
       num_apps: "{{ (num_dc | int) / 5 }}"
-  - name: Set oc binary
-    when: oc is not defined
-    set_fact:
-      oc: "oc"
   - name: Login
     when: oc_username is defined and oc_password is defined
-    command: "{{oc}} login --username={{ oc_username }} --password={{ oc_password }}"
+    command: "oc login --username={{ oc_username }} --password={{ oc_password }}"
   - name: Check namespace presence
-    command: "{{oc}} get project {{ namespace }}"
+    command: "oc get project {{ namespace }}"
     register: ns_exists
     failed_when: false
   - name: Create namespace
     when: ns_exists.rc != 0
-    command: "{{oc}} new-project {{ namespace }}"
+    command: "oc new-project {{ namespace }}"
   # - name: Add policy allowing privileged containers
   #   when: use_istio | bool
-  #   command: "{{oc}} adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
+  #   command: "oc adm policy add-scc-to-user privileged -z default -n {{ namespace }}"
   - name: Switch namespace
-    command: "{{oc}} project {{ namespace }}"
+    command: "oc project {{ namespace }}"
     failed_when: false
   - name: Clean leftovers from previous test
     include_tasks: delete-resources.yaml
@@ -37,7 +33,7 @@
       src: services.yaml.j2
       dest: "{{ services.path }}"
   - name: Apply services
-    command: "{{oc}} apply -f {{ services.path }}"
+    command: "oc apply -f {{ services.path }}"
   - name: Drop temporary services file
     file:
       path: "{{ services.path }}"
@@ -48,13 +44,13 @@
     - name: Generate gateway certificates
       command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /tmp/app.key -out /tmp/app.crt -subj "/CN=*.{{ wildcard_domain }}/O=app"
     - name: Drop old certificates
-      command: "{{oc}} delete secret istio-ingressgateway-certs -n {{ control_plane }}"
+      command: "oc delete secret istio-ingressgateway-certs -n {{ control_plane }}"
       failed_when: false
     - name: Apply certificates to ingressgateway
-      command: "{{oc}} create -n {{ control_plane }} secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
+      command: "oc create -n {{ control_plane }} secret tls istio-ingressgateway-certs --key /tmp/app.key --cert /tmp/app.crt"
     # For some reason the update on gateway requires resourceVersion
     - name: Delete old gateway
-      command: "{{oc}} delete gateway app-gateway -n {{ namespace }}"
+      command: "oc delete gateway app-gateway -n {{ namespace }}"
       failed_when: false
     - name: Get temporary routing files
       tempfile:
@@ -66,7 +62,7 @@
         src: routing.yaml.j2
         dest: "{{ routing.path }}"
     - name: Apply routing
-      command: "{{oc}} apply -f {{ routing.path }}"
+      command: "oc apply -f {{ routing.path }}"
     - name: Drop temporary routing file
       file:
         path: "{{ routing.path }}"
@@ -75,19 +71,19 @@
       when: control_plane == 'istio-system' and target == 'routers'
       block:
       - name: Drop existing routes
-        command: "{{ oc }} delete route --all -n {{ control_plane }}"
+        command: "oc delete route --all -n {{ control_plane }}"
         failed_when: false
       - name: Expose route
-        command: "{{ oc }} create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port={{ gateway_port }} --hostname=app-{{ item }}.{{ wildcard_domain }}"
+        command: "oc create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port={{ gateway_port }} --hostname=app-{{ item }}.{{ wildcard_domain }}"
         loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
   - name: Setup native Openshift routing
     when: not (use_istio | bool)
     block:
     - name: Drop existing routes
-      command: "{{ oc }} delete route --all -n {{ namespace }}"
+      command: "oc delete route --all -n {{ namespace }}"
       failed_when: false
     - name: Expose route
-      command: "{{ oc }} create route reencrypt app-{{ item }} --cert=/home/rvansa/workspace/mannequin/src/main/resources/domain.crt --key=/home/rvansa/workspace/mannequin/src/main/resources/domain.key --service=app-{{ item }} --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
+      command: "oc create route reencrypt app-{{ item }} --cert=/home/rvansa/workspace/mannequin/src/main/resources/domain.crt --key=/home/rvansa/workspace/mannequin/src/main/resources/domain.key --service=app-{{ item }} --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
       loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
 # When starting all the deployments concurrently sometimes things get stuck
   - name: Generate deployment configs in batches

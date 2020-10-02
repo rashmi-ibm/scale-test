@@ -1,5 +1,5 @@
 - name: Delete resources
-  command: "{{oc}} delete {{ item }} -l app==scale-test -n {{ namespace }}"
+  command: "oc delete {{ item }} -l app==scale-test -n {{ namespace }}"
   failed_when: false
   loop:
   - deploymentconfig

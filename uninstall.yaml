@@ -6,10 +6,10 @@
     set_fact:
       oc: "oc"
   - name: Drop control planes
-    command: "{{ oc }} delete smcp -n istio-system --all"
+    command: "oc delete smcp -n istio-system --all"
     failed_when: false
   - name: Drop istio-system
-    command: "{{ oc }} delete project istio-system"
+    command: "oc delete project istio-system"
     failed_when: false
   - name: Get rid of finalizers
     include_tasks: drop-finalizers.yaml
@@ -27,33 +27,33 @@
   #   vars:
   #     namespace: observability
   - name: Drop Jaeger CRDs
-    shell: "{{ oc }} get crd -o name | grep jaeger | xargs -r {{ oc }} delete"
+    shell: "oc get crd -o name | grep jaeger | xargs -r oc delete"
   - name: Drop Jaeger SA
-    shell: "{{ oc }} get sa -o name | grep jaeger | xargs -r {{ oc }} delete"
+    shell: "oc get sa -o name | grep jaeger | xargs -r oc delete"
   - name: Drop Jaeger clusterrole
-    shell: "{{ oc }} get clusterrole -o name | grep jaeger | xargs -r {{ oc }} delete"
+    shell: "oc get clusterrole -o name | grep jaeger | xargs -r oc delete"
   - name: Drop Jaeger cluster role binding
-    shell: "{{ oc }} get clusterrolebinding -o name | grep jaeger | xargs -r {{ oc }} delete"
+    shell: "oc get clusterrolebinding -o name | grep jaeger | xargs -r oc delete"
   - name: Drop Jaeger operator namespace
-    shell: "{{ oc }} delete project observability"
+    shell: "oc delete project observability"
   - name: Drop Maistra operator
-    shell: "{{ oc }} delete -n istio-operator -f https://raw.githubusercontent.com/Maistra/istio-operator/maistra-0.12/deploy/maistra-operator.yaml"
+    shell: "oc delete -n istio-operator -f https://raw.githubusercontent.com/Maistra/istio-operator/maistra-0.12/deploy/maistra-operator.yaml"
   - name: Drop Maistra operator namespace
-    shell: "{{ oc }} delete project istio-operator"
+    shell: "oc delete project istio-operator"
   - name: Get rid of finalizers
     include_tasks: drop-finalizers.yaml
     vars:
       namespace: istio-operator
   - name: Drop CSR
-    shell: "{{ oc }} delete csr istio-sidecar-injector.istio-system"
+    shell: "oc delete csr istio-sidecar-injector.istio-system"
     failed_when: false
   - name: Drop CRDs
-    shell: "{{ oc }} get crd -o name | grep istio | xargs -r {{ oc }} delete"
+    shell: "oc get crd -o name | grep istio | xargs -r oc delete"
   - name: Drop mutating webhooks
-    shell: "{{ oc }} get mutatingwebhookconfigurations -o name | grep istio | xargs -r {{ oc }} delete"
+    shell: "oc get mutatingwebhookconfigurations -o name | grep istio | xargs -r oc delete"
   - name: Drop validating webhooks
-    shell: "{{ oc }} get validatingwebhookconfiguration -o name | grep istio | xargs -r {{ oc }} delete"
+    shell: "oc get validatingwebhookconfiguration -o name | grep istio | xargs -r oc delete"
   - name: Drop cluster roles
-    shell: "{{ oc }} get clusterroles -o name | grep istio | xargs -r {{ oc }} delete"
+    shell: "oc get clusterroles -o name | grep istio | xargs -r oc delete"
   - name: Drop cluster role bindings
-    shell: "{{ oc }} get clusterrolebindings -o name | grep istio | xargs -r {{ oc }} delete"
+    shell: "oc get clusterrolebindings -o name | grep istio | xargs -r oc delete"
