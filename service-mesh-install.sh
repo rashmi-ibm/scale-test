@@ -32,6 +32,9 @@ oc apply -f smcp.yaml
 oc new-project mesh-scale || true # don't fail if it exists
 oc apply -f smmr.yaml
 
+# Make sure there's only one gateway (otherwise the loop below gets stuck)
+oc scale deployment istio-ingressgateway -n mesh-control-plane --replicas=1
+
 # Wait until everyone boots up
 while :
 do
@@ -40,5 +43,6 @@ do
     echo "All control-plane pods are up and running"
     break;
   fi
+  echo "Waiting for istio-system, $PODS_UP/7 pods up"
   sleep 5
 done

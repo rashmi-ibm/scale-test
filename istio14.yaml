@@ -41,7 +41,7 @@ spec:
     cni:
       cniBinDir: /var/lib/cni/bin
       cniConfDir: /etc/cni/multus/net.d
-      # cniConfFileName: istio-cni.conf
+      cniConfFileName: istio-cni.conf
       chained: false
       excludeNamespaces:
        - istio-system
