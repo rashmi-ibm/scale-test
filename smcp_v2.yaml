@@ -1,0 +1,82 @@
+apiVersion: maistra.io/v2
+kind: ServiceMeshControlPlane
+metadata:
+  name: basic-install
+  namespace: mesh-control-plane
+spec:
+  addons:
+    grafana:
+      enabled: false
+    jaeger:
+      install:
+        storage:
+          type: Memory
+    kiali:
+      enabled: false
+    prometheus:
+      install:
+        service:
+          ingress:
+            enabled: false
+  gateways:
+    egress:
+      enabled: false
+      runtime:
+        deployment:
+          autoScaling:
+            enabled: false
+      service: {}
+    ingress:
+      runtime:
+        container:
+          resources:
+            # Missing the limits would cause errors with requests above limits
+            limits:
+              cpu: "256"
+              memory: 256Gi
+            requests:
+              cpu: "16"
+              memory: 2Gi
+        deployment:
+          autoScaling:
+            enabled: false
+      service: {}
+    openshiftRoute:
+      enabled: true
+  policy:
+    type: None
+  profiles:
+  - default
+  proxy:
+    injection:
+      autoInject: false
+    runtime:
+      container:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+  runtime:
+    components:
+      mixer.policy:
+        deployment:
+          autoScaling:
+            enabled: false
+      mixer.telemetry:
+        deployment:
+          autoScaling:
+            enabled: false
+      pilot:
+        deployment:
+          autoScaling:
+            enabled: false
+  techPreview:
+    tracing:
+      jaeger:
+        enabled: false
+  telemetry:
+    type: None
+  tracing:
+    sampling: 0
+    type: None
+  version: v2.0

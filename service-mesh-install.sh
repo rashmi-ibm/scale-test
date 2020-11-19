@@ -24,13 +24,26 @@ do
   fi
 done
 
+VERSION=${VERSION:-"2.0"}
+if [ "$VERSION" == "2.0" ]; then
+   SMCP=smcp_v2.yaml
+   # Istiod, prometheus and ingress gateway
+   EXPECTED_PODS=3
+else
+   SMCP=smcp.yaml
+   EXPECTED_PODS=7
+fi
+
 # Install control-plane
 oc new-project mesh-control-plane || true # don't fail if it exists
-oc apply -f smcp.yaml
+oc apply -f $SMCP
 
 # Create mesh-scale namespace so we can register a member roll
 oc new-project mesh-scale || true # don't fail if it exists
 oc apply -f smmr.yaml
+
+# Wait until operator creates the deployment
+while ! oc get deployment istio-ingressgateway -n mesh-control-plane 2> /dev/null; do sleep 1; done;
 
 # Make sure there's only one gateway (otherwise the loop below gets stuck)
 oc scale deployment istio-ingressgateway -n mesh-control-plane --replicas=1
@@ -39,7 +52,7 @@ oc scale deployment istio-ingressgateway -n mesh-control-plane --replicas=1
 while :
 do
   PODS_UP=$(oc get po -n mesh-control-plane --field-selector 'status.phase=Running' -o json | jq '.items | length')
-  if [ $PODS_UP -eq 7 ]; then
+  if [ $PODS_UP -eq $EXPECTED_PODS ]; then
     echo "All control-plane pods are up and running"
     break;
   fi
