@@ -49,6 +49,7 @@
         num_routers: "{{ router_cmd.stdout.split() | length }}"
         endpoint_port: 443
         num_gateways: "{{ gateway_cmd.stdout }}"
+      failed_when: num_routers != expected_routers
   - when: target == 'gateways'
     block:
     - name: Get ingress gateways
@@ -59,6 +60,7 @@
         num_gateways: "{{ gateway_cmd.stdout.split() | length }}"
         num_routers: 0
         endpoint_port: "{{ gateway_port }}"
+      failed_when: num_gateways != expected_gateways
   - when: target == 'services'
     block:
     - name: Find services
@@ -70,6 +72,7 @@
         num_routers: 0
         num_gateways: 0
         endpoint_port: 8443
+      failed_when: (endpoints | length) == 0
 
   - name: Get number of virtual services
     shell: "oc get vs -n {{ namespace }} -o json | jq '.items | length'"
