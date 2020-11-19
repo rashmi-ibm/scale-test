@@ -49,7 +49,7 @@
         num_routers: "{{ router_cmd.stdout.split() | length }}"
         endpoint_port: 443
         num_gateways: "{{ gateway_cmd.stdout }}"
-      failed_when: num_routers != expected_routers
+      failed_when: num_routers != expected_routers or num_gateways != expected_gateways
   - when: target == 'gateways'
     block:
     - name: Get ingress gateways
