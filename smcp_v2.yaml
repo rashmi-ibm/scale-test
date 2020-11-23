@@ -40,6 +40,9 @@ spec:
         deployment:
           autoScaling:
             enabled: false
+        pod:
+          nodeSelector:
+            test.role: router
       service: {}
     openshiftRoute:
       enabled: true
