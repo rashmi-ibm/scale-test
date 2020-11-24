@@ -1,0 +1,44 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+  name: basic-install
+spec:
+  profile: default
+  components:
+    ingressGateways:
+    - name: istio-ingressgateway
+      enabled: true
+      k8s:
+        nodeSelector:
+          test.role: router
+        replicaCount: 1
+        resources:
+          limits:
+            cpu: "256"
+            memory: 256Gi
+          requests:
+            cpu: "16"
+            memory: 2Gi
+    cni:
+      namespace: kube-system
+      enabled: true
+  values:
+    cni:
+      cniBinDir: /var/lib/cni/bin
+      cniConfDir: /etc/cni/multus/net.d
+      cniConfFileName: istio-cni.conf
+      chained: false
+      excludeNamespaces:
+       - istio-system
+       - kube-system
+      logLevel: info
+    gateways:
+      istio-ingressgateway:
+        autoscaleEnabled: false
+    global:
+      proxy:
+        autoInject: disabled
+    sidecarInjectorWebhook:
+      injectedAnnotations:
+        k8s.v1.cni.cncf.io/networks: istio-cni
