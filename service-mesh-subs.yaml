@@ -6,7 +6,7 @@ items:
     name: elasticsearch-operator
     namespace: openshift-operators
   spec:
-    channel: "4.5"
+    channel: "4.6"
     name: elasticsearch-operator
     source: redhat-operators
     sourceNamespace: openshift-marketplace
