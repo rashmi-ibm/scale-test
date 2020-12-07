@@ -56,6 +56,6 @@ do
     echo "All control-plane pods are up and running"
     break;
   fi
-  echo "Waiting for istio-system, $PODS_UP/7 pods up"
+  echo "Waiting for mesh-control-plane, $PODS_UP/$EXPECTED_PODS pods up"
   sleep 5
 done
