@@ -37,8 +37,10 @@ backend_type=java
 
 hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/distribution
 hyperfoil_deployer=k8s
+hyperfoil_controller_protocol=https
 hyperfoil_controller_host=hyperfoil.apps.ocp.scalelab
-hyperfoil_controller_port=80
+hyperfoil_controller_port=443
+hyperfoil_validate_certs=false
 test_rampup_duration=120
 test_steady_duration=60
 test_name=closedmodel
