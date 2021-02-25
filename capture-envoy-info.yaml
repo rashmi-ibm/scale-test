@@ -1,0 +1,40 @@
+- name: Create temporary dir for envoy info
+  tempfile:
+    prefix: "envoy-"
+    state: directory
+  register: envoy_info_dir
+- name: Capture info from gateways
+  loop: "{{ ['certs', 'clusters', 'config_dump', 'listeners', 'memory', 'runtime', 'server_info', 'stats'] | product(gateway_pods.stdout.split()) | list }}"
+  shell: "oc exec -n {{ control_plane }} -c istio-proxy {{ item[1] }} -- curl -s localhost:15000/{{ item[0] }} > {{ envoy_info_dir.path }}/{{ item[1] }}_{{ item[0] }}"
+  async: 3600
+  poll: 0
+  register: gateway_pod_info
+- name: Wait for the info
+  loop: "{{ gateway_pod_info.results }}"
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  retries: 360
+  delay: 10
+- name: Capture info from sidecars
+  loop: "{{ ['stats'] | product(workload_pods.stdout.split()) | list }}"
+  shell: "oc exec -n {{ namespace }} -c istio-proxy {{ item[1] }} -- curl -s localhost:15000/{{ item[0] }} > {{ envoy_info_dir.path }}/{{ item[1] }}_{{ item[0] }}"
+  async: 3600
+  poll: 0
+  register: workload_pod_info
+- name: Wait for the info
+  loop: "{{ workload_pod_info.results }}"
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: async_poll_results
+  until: async_poll_results.finished
+  retries: 360
+  delay: 10
+- name: Zip info
+  archive:
+    format: zip
+    path: "{{ envoy_info_dir.path }}/*"
+    dest: "{{ dest }}"
+- name: Delete temporary dir
+  file:
+    path: "{{ envoy_info_dir.path }}"
+    state: absent

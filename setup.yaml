@@ -74,7 +74,7 @@
         command: "oc delete route --all -n {{ control_plane }}"
         failed_when: false
       - name: Expose route
-        command: "oc create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port={{ gateway_port }} --hostname=app-{{ item }}.{{ wildcard_domain }}"
+        command: "oc create route passthrough app-{{ item }} -n {{ control_plane }} --service=istio-ingressgateway --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
         loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
   - name: Setup native Openshift routing
     when: not (use_istio | bool)

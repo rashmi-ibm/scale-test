@@ -41,6 +41,7 @@
       command: "oc get po -n openshift-ingress -o jsonpath='{.items[*].status.hostIP}'"
       register: router_cmd
     - name: Get number of ingress gateways
+      when: use_istio | bool
       shell: "oc get po -n {{ control_plane }} -l istio=ingressgateway -o json | jq '.items | length'"
       register: gateway_cmd
     - name: Set routers
@@ -48,7 +49,7 @@
         endpoints: "{{ router_cmd.stdout.split() }}"
         num_routers: "{{ router_cmd.stdout.split() | length }}"
         endpoint_port: 443
-        num_gateways: "{{ gateway_cmd.stdout }}"
+        num_gateways: "{{ gateway_cmd.stdout if use_istio | bool else 0}}"
       failed_when: num_routers != expected_routers or num_gateways != expected_gateways
   - when: target == 'gateways'
     block:
@@ -59,7 +60,7 @@
         endpoints: "{{ gateway_cmd.stdout.split() }}"
         num_gateways: "{{ gateway_cmd.stdout.split() | length }}"
         num_routers: 0
-        endpoint_port: "{{ gateway_port }}"
+        endpoint_port: 8443
       failed_when: num_gateways != expected_gateways
   - when: target == 'services'
     block:
@@ -73,16 +74,41 @@
         num_gateways: 0
         endpoint_port: 8443
       failed_when: (endpoints | length) == 0
-
   - name: Get number of virtual services
     shell: "oc get vs -n {{ namespace }} -o json | jq '.items | length'"
     register: virtualservices
+  - name: Get ingressgateway names
+    when: use_istio | bool
+    shell: "oc get po -n {{ control_plane }} -l istio=ingressgateway -o name --no-headers | cut -f 2 -d '/'"
+    register: gateway_pods
+  - name: Get workload pod names
+    shell: "oc get po -n {{ namespace }} -l app=scale-test -o name --no-headers | cut -f 2 -d '/'"
+    register: workload_pods
+  - name: Reset counters
+    when: use_istio | bool
+    loop: "{{ gateway_pods.stdout.split() | product([ control_plane ]) | list + workload_pods.stdout.split() | product([ namespace ]) | list }}"
+    shell: "oc exec -n {{ item[1] }} -c istio-proxy {{ item[0] }} -- curl -s localhost:15000/reset_counters -X POST"
+    async: 60
+    poll: 0
+    register: stats_reset
+  - name: Wait for the info
+    when: use_istio | bool
+    loop: "{{ stats_reset.results }}"
+    async_status:
+      jid: "{{ item.ansible_job_id }}"
   - name: Start test
     include_role:
       name: hyperfoil.hyperfoil_test
     when: hyperfoil_deployer == "k8s"
     vars:
       run_description: "{{ namespace }}%20R%3D{{ num_routers }}%20G%3D{{ num_gateways }}%20P%3D{{ total_pods }}%20VS%3D{{ virtualservices.stdout }}"
+  - name: Capture info after test
+    when: use_istio | bool
+    include_tasks: capture-envoy-info.yaml
+    vars:
+      dest: "/tmp/envoy_{{test_runid}}_r{{ num_routers }}_g{{ num_gateways }}_d{{ num_dc }}.zip"
   - name: Show run ID
     debug:
       msg: "Run ID was {{ test_runid }}"
+  - name: Fetch Hyperfoil stats
+    shell: "curl -s -k {{ hyperfoil_controller_protocol }}://{{ hyperfoil_controller_host }}:{{ hyperfoil_controller_port}}/run/{{ test_runid }}/stats/all -H 'accept: application/json' > /tmp/hf_{{ test_runid }}_r{{ num_routers }}_g{{ num_gateways }}_d{{ num_dc }}.json"

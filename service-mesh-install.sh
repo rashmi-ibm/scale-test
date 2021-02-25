@@ -34,16 +34,33 @@ else
    EXPECTED_PODS=7
 fi
 
+while :
+do
+  ADMISSION_CONTROLLERS=$(oc get ep -n openshift-operators maistra-admission-controller -o json | jq '.subsets[0].addresses | length')
+  if [ $ADMISSION_CONTROLLERS -eq "1" ]; then
+    echo "Admission controller is up."
+    break;
+  fi
+  echo "Waiting for admission controller to boot, ready: $ADMISSION_CONTROLLERS"
+  sleep 5
+done;
+
 # Install control-plane
 oc new-project mesh-control-plane || true # don't fail if it exists
-oc apply -f $SMCP
+while ! oc apply -f $SMCP ; do
+  echo "The operator pod is probably not accepting connections yet..."
+  sleep 5;
+done;
 
 # Create mesh-scale namespace so we can register a member roll
 oc new-project mesh-scale || true # don't fail if it exists
 oc apply -f smmr.yaml
 
 # Wait until operator creates the deployment
-while ! oc get deployment istio-ingressgateway -n mesh-control-plane 2> /dev/null; do sleep 1; done;
+while ! oc get deployment istio-ingressgateway -n mesh-control-plane 2> /dev/null; do
+  echo "Ingress gateway is not up yet"
+  sleep 1;
+done;
 
 # Make sure there's only one gateway (otherwise the loop below gets stuck)
 oc scale deployment istio-ingressgateway -n mesh-control-plane --replicas=1

@@ -5,11 +5,20 @@ metadata:
   name: basic-install
 spec:
   profile: default
+  meshConfig:
+    enableTracing: false
+    defaultConfig:
+      tracing:
+        sampling: 0
   components:
     ingressGateways:
     - name: istio-ingressgateway
       enabled: true
       k8s:
+        env:
+        - name: ISTIO_METAJSON_ANNOTATIONS
+          value: |
+            {"sidecar.istio.io/statsInclusionPrefixes": "cluster.outbound,listener"}
         nodeSelector:
           test.role: router
         replicaCount: 1
@@ -23,6 +32,9 @@ spec:
     cni:
       namespace: kube-system
       enabled: true
+    pilot:
+      k8s:
+        replicaCount: 1
   values:
     cni:
       cniBinDir: /var/lib/cni/bin
@@ -39,6 +51,11 @@ spec:
     global:
       proxy:
         autoInject: disabled
+      # Prevents reaching DockerHub thresholds
+      imagePullPolicy: IfNotPresent
+    pilot:
+      autoscaleEnabled: false
+      traceSampling: 0
     sidecarInjectorWebhook:
       injectedAnnotations:
         k8s.v1.cni.cncf.io/networks: istio-cni

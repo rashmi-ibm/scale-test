@@ -25,6 +25,7 @@ items:
 # Alternative solution: https://bani.com.br/2018/09/istio-sidecar-injection-enabling-automatic-injection-adding-exceptions-and-debugging/
         annotations:
           sidecar.istio.io/inject: "true"
+          sidecar.istio.io/statsInclusionPrefixes: listener,cluster.outbound
         labels:
           app: scale-test
           batch: "batch-{{ dc_first }}"

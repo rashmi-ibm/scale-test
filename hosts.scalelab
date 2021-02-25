@@ -48,32 +48,29 @@ test_name=closedmodel
 test_users_per_sec=4500
 test_inc_users_per_sec=1500
 # For closed-model
-test_concurrent_users=1050
+test_concurrent_users=1200
+test_shared_connections=10000
 
-test_shared_connections=2300
-
-docker_registry=image-registry.openshift-image-registry.svc:5000
+#docker_registry=image-registry.openshift-image-registry.svc:5000
 pods_per_dc=1
-num_dc=10
+num_dc=160
 batch_size=1000
-use_istio=true
-#use_istio=false
-#namespace=plain-scale
-#wildcard_domain=plain.apps.ocp.scalelab
+#use_istio=true
+use_istio=false
+namespace=plain-scale
+wildcard_domain=plain.apps.ocp.scalelab
 
 
 #namespace=mesh-scale
 #control_plane=mesh-control-plane
 #wildcard_domain=mesh.apps.ocp.scalelab
-gateway_port=8443
 
-namespace=istio-scale
-control_plane=istio-system
-wildcard_domain=istio.apps.ocp.scalelab
-gateway_port=443
+#namespace=istio-scale
+#control_plane=istio-system
+#wildcard_domain=istio.apps.ocp.scalelab
 
-policy_version=old
+policy_version=new
 
-target=gateways
-#target=routers
+#target=gateways
+target=routers
 #target=services

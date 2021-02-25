@@ -57,4 +57,5 @@ if ! oc get namespace istio-scale; then
     oc new-project istio-scale
     oc label namespace istio-scale istio-injection=enabled
     oc create -n istio-scale -f istio-net-attach-def.yaml
+    oc adm policy add-scc-to-group anyuid system:serviceaccounts:istio-scale
 fi
