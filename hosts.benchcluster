@@ -3,46 +3,69 @@ hyperfoil_controller
 hyperfoil_agent
 
 [hyperfoil_controller]
-benchclient1 ansible_host=benchclient1
 
 [hyperfoil_agent]
-benchclient1
-#benchclient2
+worker003
 
 [hyperfoil:vars]
 hyperfoil_jfr=false
-#hyperfoil_log_config=/home/benchuser/rvansa/log4j2.xml
-hyperfoil_log_config=/home/benchuser/rvansa/log4j2-info.xml
 
 [openshift]
-benchserver2
+localhost
 
 [openshift:vars]
-backend_servers=8
-backend_workers=16
-backend_cpu=16
+#backend_servers=8
+#backend_workers=16
+backend_cpu=300m
+backend_type=java
 
 [compute]
-benchserver2 ansible_python_interpreter=/usr/libexec/platform-python
 
 [all:vars]
-backend_node=benchserver4
+hyperfoil_deployer=k8s
+hyperfoil_controller_protocol=https
+hyperfoil_controller_host=hyperfoil.apps.test.perf-lab-myocp4.com
+hyperfoil_controller_port=443
+hyperfoil_validate_certs=false
+test_rampup_duration=120
+test_steady_duration=300
+test_name=closedmodel
+#test_name=shardedwrk
+fork=none
+http2="true"
 
-hyperfoil_distribution=/home/rvansa/workspace/Hyperfoil/distribution/target/distribution
-#hyperfoil_distribution=/home/wreicher/code/github/Hyperfoil/Hyperfoil/distribution/target/hyperfoil-0.4-SNAPSHOT.zip
-# hyperfoil_controller_args="-Dio.hyperfoil.deploy.timeout=120000 -Dio.hyperfoil.deployer=k8s -Dio.hyperfoil.deployer.k8s.apiserver=https://api.benchcluster.perf.lab.eng.rdu2.redhat.com:6443/ -Dio.hyperfoil.deployer.k8s.clientcert=/tmp/clientcert.pem -Dio.hyperfoil.deployer.k8s.clientkey=/tmp/clientkey.pem -Dio.hyperfoil.deployer.k8s.servercert=/tmp/servercert.pem -Dio.hyperfoil.deployer.k8s.token=eyJhbGciOiJSUzI1NiIsImtpZCI6IiJ9.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJoeXBlcmZvaWwiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlY3JldC5uYW1lIjoiY29udHJvbGxlci10b2tlbi1iOG41dCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50Lm5hbWUiOiJjb250cm9sbGVyIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMTUwZjgwMWYtZTVmMS0xMWU5LWEzZGUtMDYxMTExMTExMTAzIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50Omh5cGVyZm9pbDpjb250cm9sbGVyIn0.ehUfFTovHJR7Yci_eHiZUkZiGxudPrSSYxsFkaV6VZXWV4ujcxgxyKKdMsVAti83ktdX53L1US9dEQVNT4kYFrg_0LE1ihPbtNqrZRRzzr8gS_kKVfZepcqaFkzxJhXO7CBXeZzqNlffQqZe8UGRVUyHDFnwmzZZYD5SkXpKn1v9YgT2qcj4AKWWql-uQb9FIlufJOMuCGixREcif2GwaQ9JDxjYDSMbskcjI9Fl801H_Y2yOyo7OuHTWjGH8H-J5BOnJcTXYbK1O-K7t-EUUWxKIRqx1NFl02IUcWgA53A0JjykZBs2H7895LVa63RxSqQ7WK-ja-v6v9wi-Cj-SA"
-hyperfoil_trigger_url="http://benchserver1.perf.lab.eng.rdu2.redhat.com:8888/job/hyperfoil-run/buildWithParameters?token=thisisatokenforrunninghyperfoiljob\&delay=0sec\&"
-test_rampup_duration=20
-test_steady_duration=20
-test_users_per_sec=5000
-test_inc_users_per_sec=1000
-test_shared_connections=5000
+# For open-model
+test_users_per_sec=4500
+test_inc_users_per_sec=1500
+# For closed-model
+#test_concurrent_users=12000
+#test_shared_connections=5376
+#test_shared_connections=60000
+test_concurrent_users=6000
+test_shared_connections=6000
 
+pods_per_dc=1
+num_dc=40
+batch_size=1000
 use_istio=true
-docker_registry=image-registry.openshift-image-registry.svc:5000
-pods_per_dc=2
-num_dc=3
-namespace=mannequin-test
-wildcard_domain=istio.apps.benchcluster.perf.lab.eng.rdu2.redhat.com
-kube_api=api.benchcluster.perf.lab.eng.rdu2.redhat.com:6443
-istio_version=1.2.7
+#use_istio=false
+record_envoy_stats=false
+#namespace=plain-scale
+#wildcard_domain=plain.apps.test.perf-lab-myocp4.com
+
+namespace=mesh-scale
+control_plane=mesh-control-plane
+wildcard_domain=mesh.apps.test.perf-lab-myocp4.com
+
+#namespace=istio-scale
+#control_plane=istio-system
+#wildcard_domain=istio.apps.test.perf-lab-myocp4.com
+
+policy_version=new
+
+target=gateways
+#target=routers
+#target=services
+
+expected_routers=0
+expected_gateways="1"

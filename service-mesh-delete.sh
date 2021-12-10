@@ -4,6 +4,7 @@
 oc delete smmr -n mesh-control-plane --all
 oc delete smcp -n mesh-control-plane basic-install
 oc delete subs -n openshift-operators servicemeshoperator kiali-ossm jaeger-product elasticsearch-operator
+oc delete subs -n openshift-operators servicemeshoperator
 oc delete csv -n openshift-operators -l operators.coreos.com/elasticsearch-operator.openshift-operators
 oc delete csv -n openshift-operators -l operators.coreos.com/jaeger-product.openshift-operators
 oc delete csv -n openshift-operators -l operators.coreos.com/kiali-ossm.openshift-operators
@@ -14,6 +15,12 @@ oc delete namespace mesh-control-plane mesh-scale
 oc delete mutatingwebhookconfiguration -l app.kubernetes.io/instance=mesh-control-plane
 oc delete validatingwebhookconfiguration -l app.kubernetes.io/instance=mesh-control-plane
 
+oc delete mutatingwebhookconfiguration openshift-operators.servicemesh-resources.maistra.io
+oc delete validatingwebhookconfiguration openshift-operators.servicemesh-resources.maistra.io
+
 # Operator itself seems to persist
 oc delete deployment -n openshift-operators istio-operator
 oc delete daemonset -n openshift-operators istio-node
+oc delete sa -n openshift-operators istio-operator
+oc delete sa -n openshift-operators istio-cni
+oc delete service maistra-admission-controller

@@ -5,6 +5,7 @@ set -e
 
 # Install subscriptions
 oc apply -f service-mesh-subs.yaml
+#oc apply -f service-mesh-subs-qe.yaml
 
 while :
 do

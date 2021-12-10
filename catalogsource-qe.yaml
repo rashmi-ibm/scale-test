@@ -1,0 +1,17 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: service-mesh-qe
+  namespace: openshift-marketplace
+spec:
+  displayName: Service Mesh QE
+  icon:
+    base64data: ""
+    mediatype: ""
+  image: quay.io/maistra/servicemesh-olm-iib:2.1-qe
+  publisher: Red Hat
+  sourceType: grpc
+  updateStrategy:
+    registryPoll:
+      interval: 10m0s
+

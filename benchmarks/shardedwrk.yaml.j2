@@ -1,0 +1,61 @@
+name: shardedwrk
+agents:
+  default:
+    extras: -XX:+UseShenandoahGC
+    # -XX:StartFlightRecording=delay=30s,duration=150s,disk=true,filename=/tmp/recording.jfr,settings=profile
+    #stop: false
+{% for agent in groups[hyperfoil_agent_group] %}
+{%   if hyperfoil_deployer == "k8s" %}
+  {{ agent }}:
+    node: {{ agent }}
+{%   else %}
+  {{ agent }}: {{ hostvars[agent]['ansible_host'] }}:{{ hyperfoil_agent_port }}
+{%   endif %}
+{% endfor %}
+threads: 28
+http:
+{% for index in range(1, (num_apps | int) + 1) %}
+- host: https://app-{{ index }}.{{ wildcard_domain }}
+  allowHttp2: false
+{% if (endpoints | length) > 0 %}
+  addresses:
+{%   for endpoint in endpoints %}
+  - {{ endpoint }}:{{ endpoint_port }}
+{%   endfor %}
+{% endif %}
+  sharedConnections: {{ (test_shared_connections | default(100, true)) // (num_apps | int) }}
+{% endfor %}
+phases:
+- pause:
+    noop:
+      startAfterStrict:
+{% for index in range(1, (num_apps | int) + 1) %}
+      - warmup-{{ index }}
+{% endfor %}
+{% for index in range(1, (num_apps | int) + 1) %}
+- warmup-{{ index }}:
+    always:
+      users: {{ test_concurrent_users // (num_apps | int ) }}
+      duration: {{ test_rampup_duration }}
+      scenario: &test-{{ index }}
+      - test:
+        - randomItem:
+            list:
+              stable: 0.8
+              canary: 0.2
+            toVar: variant
+        - httpRequest:
+            GET: /mersennePrime?p=1
+            authority: app-{{ index }}.{{ wildcard_domain }}:443
+            headers:
+              x-variant:
+                fromVar: variant
+            sla:
+              errorRatio: 0.1
+- steady-{{ index }}:
+    always:
+      users: {{ test_concurrent_users // (num_apps | int ) }}
+      duration: {{ test_steady_duration }}
+      startAfter: pause
+      scenario: *test-{{ index }}
+{% endfor %}

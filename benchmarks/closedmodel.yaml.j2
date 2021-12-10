@@ -2,6 +2,8 @@ name: closedmodel
 agents:
   default:
     extras: -XX:+UseShenandoahGC
+    # -XX:StartFlightRecording=delay=30s,duration=150s,disk=true,filename=/tmp/recording.jfr,settings=profile
+    #stop: false
 {% for agent in groups[hyperfoil_agent_group] %}
 {%   if hyperfoil_deployer == "k8s" %}
   {{ agent }}:
@@ -10,11 +12,11 @@ agents:
   {{ agent }}: {{ hostvars[agent]['ansible_host'] }}:{{ hyperfoil_agent_port }}
 {%   endif %}
 {% endfor %}
-threads: 32
+threads: 50
 http:
 {% for index in range(1, (num_apps | int) + 1) %}
 - host: https://app-{{ index }}.{{ wildcard_domain }}
-  allowHttp2: false
+  allowHttp2: {{ http2 }}
 {% if (endpoints | length) > 0 %}
   addresses:
 {%   for endpoint in endpoints %}
@@ -26,17 +28,19 @@ http:
 phases:
 - warmup:
     always:
+      isWarmup: true
       users: {{ test_concurrent_users }}
       duration: {{ test_rampup_duration }}
       forks:
         simple: &simple
-          weight: 1
+          weight: {{ (fork == "simple") | ternary(1, 0) }}
           scenario:
           - params: &params
-            - randomInt:
-                toVar: p
-                min: 200
-                max: 300
+            # - randomInt:
+            #     toVar: p
+            #     min: 200
+            #     max: 300
+            - set: p <- 1
             - randomInt:
                 toVar: hostIndex
                 min: 1
@@ -44,8 +48,8 @@ phases:
             - randomItem:
                 list:
                   stable: 0.8
-                  canary: 0.1
-                  mirror: 0.1
+                  canary: 0.2
+                  #mirror: 0.1
                 toVar: variant
           - test:
             - httpRequest:
@@ -56,6 +60,8 @@ phases:
                     fromVar: variant
                 sla:
                   errorRatio: 0.1
+                #metric:
+                # - ([^.]*)\..* -> $1
                 # handler:
                 #   header:
                 #   - recordHeaderTime:
@@ -63,7 +69,7 @@ phases:
                 #       metric: simple-upstream
                 #       unit: ms
         proxy: &proxy
-          weight: 1
+          weight: {{ (fork == "proxy") | ternary(1, 0) }}
           scenario:
           - params: *params
           - test:
@@ -75,6 +81,8 @@ phases:
                     fromVar: variant
                 sla:
                   errorRatio: 0.1
+                #metric:
+                #- ([^.]*)\..* -> $1
                 # handler:
                 #   header:
                 #   - recordHeaderTime:
@@ -85,7 +93,7 @@ phases:
                 #       header: x-proxy-service-time
                 #       metric: proxy-downstream
         db: &db
-          weight: 1
+          weight: {{ (fork == "db") | ternary(1, 0) }}
           scenario:
           - params: *params
           - test:
@@ -101,6 +109,8 @@ phases:
                     fromVar: variant
                 sla:
                   errorRatio: 0.1
+                #metric:
+                #- ([^.]*)\..* -> $1
                 # handler:
                 #   header:
                 #   - recordHeaderTime:

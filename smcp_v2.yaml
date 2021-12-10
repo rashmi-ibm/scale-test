@@ -9,8 +9,11 @@ spec:
       enabled: false
     jaeger:
       install:
+        ingress:
+          enabled: false
         storage:
           type: Memory
+          #type: Elasticsearch
     kiali:
       enabled: false
     prometheus:
@@ -82,7 +85,10 @@ spec:
         enabled: false
   telemetry:
     type: None
+#    type: Istiod
   tracing:
     sampling: 0
     type: None
-  version: v2.0
+#    sampling: 10000
+#    type: Jaeger
+  version: v2.1

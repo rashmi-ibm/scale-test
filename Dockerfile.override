@@ -1,0 +1,4 @@
+FROM quay.io/maistra/proxyv2-rhel8:latest-2.1-qe as newer
+
+FROM quay.io/maistra/proxyv2-rhel8:latest-2.0-qe
+COPY --from=newer /usr/local/bin/envoy /usr/local/bin/envoy

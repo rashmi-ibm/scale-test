@@ -7,11 +7,12 @@ items:
 {%   else %}
 {%     set app_variant = "stable" %}
 {%   endif %}
-- apiVersion: v1
+- apiVersion: apps.openshift.io/v1
   kind: DeploymentConfig
   metadata:
     labels:
       app: scale-test
+      version: "1.0"
     name: app-{{ index }}
     namespace: {{ namespace }}
   spec:
@@ -26,12 +27,17 @@ items:
         annotations:
           sidecar.istio.io/inject: "true"
           sidecar.istio.io/statsInclusionPrefixes: listener,cluster.outbound
+          sidecar.istio.io/proxyCPU: "500m"
+          sidecar.istio.io/proxyCPULimit: "2000m"
+          sidecar.istio.io/concurrency: "2"
         labels:
           app: scale-test
           batch: "batch-{{ dc_first }}"
           deploymentconfig: app-{{ index }}
           app.index: application-{{ (index + 4) // 5 }}
           app.variant:  {{ app_variant }}
+          # Kiali would complain if there were no version label
+          version: "1.0"
       spec:
         nodeSelector:
 {% if backend_node is defined %}
@@ -46,6 +52,10 @@ items:
           labelSelector:
             matchLabels:
               app: scale-test
+        tolerations:
+        - key: workload
+          operator: Exists
+          effect: NoExecute
         containers:
 {% if backend_type == "java" %}
         - image: quay.io/rvansa/mannequin:jvm-latest
@@ -58,11 +68,11 @@ items:
 {% if backend_type == "java" %}
           command:
           - java
-          - -Dquarkus.vertx.event-loops-pool-size=1
-          - -Dquarkus.vertx.internal-blocking-pool-size=1
-          - -Dquarkus.vertx.worker-pool-size=1
-          - -Dquarkus.http.io-threads=1
-          - -Dquarkus.thread-pool.core-threads=1
+          - -Dquarkus.vertx.event-loops-pool-size=2
+          - -Dquarkus.vertx.internal-blocking-pool-size=2
+          - -Dquarkus.vertx.worker-pool-size=2
+          - -Dquarkus.http.io-threads=2
+          - -Dquarkus.thread-pool.core-threads=2
           - -Dquarkus.http.ssl.certificate.file=/var/certs/tls.crt
           - -Dquarkus.http.ssl.certificate.key-file=/var/certs/tls.key
           - -jar
