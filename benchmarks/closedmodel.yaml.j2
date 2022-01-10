@@ -33,7 +33,7 @@ phases:
       duration: {{ test_rampup_duration }}
       forks:
         simple: &simple
-          weight: {{ (fork == "simple") | ternary(1, 0) }}
+          weight: {{ (fork == "simple" or fork == "all") | ternary(1, 0) }}
           scenario:
           - params: &params
             # - randomInt:
@@ -69,7 +69,7 @@ phases:
                 #       metric: simple-upstream
                 #       unit: ms
         proxy: &proxy
-          weight: {{ (fork == "proxy") | ternary(1, 0) }}
+          weight: {{ (fork == "proxy" or fork == "all") | ternary(1, 0) }}
           scenario:
           - params: *params
           - test:
@@ -93,7 +93,7 @@ phases:
                 #       header: x-proxy-service-time
                 #       metric: proxy-downstream
         db: &db
-          weight: {{ (fork == "db") | ternary(1, 0) }}
+          weight: {{ (fork == "db" or fork == "all") | ternary(1, 0) }}
           scenario:
           - params: *params
           - test:

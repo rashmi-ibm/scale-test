@@ -45,7 +45,7 @@ test_rampup_duration=120
 test_steady_duration=60
 test_name=closedmodel
 #test_name=shardedwrk
-fork=none
+fork=all
 http2="true"
 
 # For open-model
@@ -61,7 +61,6 @@ test_shared_connections=6000
 #docker_registry=image-registry.openshift-image-registry.svc:5000
 pods_per_dc=1
 num_dc=60
-batch_size=1000
 use_istio=true
 #use_istio=false
 record_envoy_stats=false

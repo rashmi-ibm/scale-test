@@ -16,6 +16,7 @@ localhost
 [openshift:vars]
 #backend_servers=8
 #backend_workers=16
+proxy_cpu=200m
 backend_cpu=300m
 backend_type=java
 
@@ -31,7 +32,7 @@ test_rampup_duration=120
 test_steady_duration=300
 test_name=closedmodel
 #test_name=shardedwrk
-fork=none
+fork=all
 http2="true"
 
 # For open-model
@@ -46,7 +47,6 @@ test_shared_connections=6000
 
 pods_per_dc=1
 num_dc=40
-batch_size=1000
 use_istio=true
 #use_istio=false
 record_envoy_stats=false

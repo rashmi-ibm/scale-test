@@ -85,14 +85,10 @@
     - name: Expose route
       command: "oc create route reencrypt app-{{ item }} --cert=/home/rvansa/workspace/mannequin/src/main/resources/domain.crt --key=/home/rvansa/workspace/mannequin/src/main/resources/domain.key --service=app-{{ item }} --port=8443 --hostname=app-{{ item }}.{{ wildcard_domain }}"
       loop: "{{ range(1, (num_apps | int) + 1, 1) | list }}"
-# When starting all the deployments concurrently sometimes things get stuck
-  - name: Generate deployment configs in batches
+  - name: Generate deployment configs
     include_tasks: generate-dc.yaml
-    vars:
-      batch_dcs: "{{ [ (num_dc | int) - dc_first + 1, batch_size ] | min }}"
-    loop: "{{ range(1, (num_dc | int) + 1, batch_size) | list }}"
-    loop_control:
-      loop_var: dc_first
+  - name: Wait for pods to come up
+    shell:  "{{ playbook_dir }}/wait-for-pods.sh {{ namespace }} \"{{ pod_pattern }}\" {{ num_dc }}"
 - hosts: hyperfoil_controller
   roles:
   - hyperfoil.hyperfoil_setup

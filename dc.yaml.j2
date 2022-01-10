@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: List
 items:
-{% for index in range(dc_first | int, dc_first | int + batch_dcs | int) %}
+{% for index in range(1, (num_dc | int) + 1) %}
 {%   if index % 5 == 1 %}
 {%     set app_variant = "canary" %}
 {%   else %}
@@ -27,12 +27,11 @@ items:
         annotations:
           sidecar.istio.io/inject: "true"
           sidecar.istio.io/statsInclusionPrefixes: listener,cluster.outbound
-          sidecar.istio.io/proxyCPU: "500m"
+          sidecar.istio.io/proxyCPU: {{ proxy_cpu }}
           sidecar.istio.io/proxyCPULimit: "2000m"
           sidecar.istio.io/concurrency: "2"
         labels:
           app: scale-test
-          batch: "batch-{{ dc_first }}"
           deploymentconfig: app-{{ index }}
           app.index: application-{{ (index + 4) // 5 }}
           app.variant:  {{ app_variant }}

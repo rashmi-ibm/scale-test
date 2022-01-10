@@ -35,6 +35,12 @@
     when: "(max_pods | int) - (min_pods | int) > 1"
     fail:
       msg: "Unbalanced pods: min = {{ min_pods }}, max = {{ max_pods }} "
+  - name: Make sure all services are reachable
+    shell: ./check-services.sh {{ wildcard_domain }} {{ num_apps }}
+    register: services_result
+    until: services_result.rc == 0
+    retries: 10
+    delay: 10
   - when: target == 'routers'
     block:
     - name: Find routers

@@ -17,12 +17,6 @@
   when: not (use_istio | bool)
   set_fact:
     pod_pattern: "1/1"
-- name: Wait for pods to come up
-  shell: "oc get po -l app==scale-test -l batch==batch-{{ dc_first }} -n {{ namespace }} --no-headers | grep '{{ pod_pattern }}' | wc -l"
-  register: ready_pods
-  until: ready_pods.stdout | int == (batch_dcs | int) * (pods_per_dc | int)
-  delay: 5
-  retries: "{{ [20, 3 * (batch_dcs | int) * (pods_per_dc | int)] | max }}"
 - name: Drop temp file
   file:
     path: "{{ resources.path }}"
