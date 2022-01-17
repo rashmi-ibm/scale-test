@@ -14,8 +14,6 @@ hyperfoil_jfr=false
 localhost
 
 [openshift:vars]
-#backend_servers=8
-#backend_workers=16
 proxy_cpu=200m
 backend_cpu=300m
 backend_type=java

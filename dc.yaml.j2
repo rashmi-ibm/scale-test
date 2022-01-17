@@ -28,8 +28,8 @@ items:
           sidecar.istio.io/inject: "true"
           sidecar.istio.io/statsInclusionPrefixes: listener,cluster.outbound
           sidecar.istio.io/proxyCPU: {{ proxy_cpu }}
-          sidecar.istio.io/proxyCPULimit: "2000m"
-          sidecar.istio.io/concurrency: "2"
+          sidecar.istio.io/proxyCPULimit: "1000m"
+          sidecar.istio.io/concurrency: "1"
         labels:
           app: scale-test
           deploymentconfig: app-{{ index }}
@@ -67,11 +67,11 @@ items:
 {% if backend_type == "java" %}
           command:
           - java
-          - -Dquarkus.vertx.event-loops-pool-size=2
-          - -Dquarkus.vertx.internal-blocking-pool-size=2
-          - -Dquarkus.vertx.worker-pool-size=2
-          - -Dquarkus.http.io-threads=2
-          - -Dquarkus.thread-pool.core-threads=2
+          - -Dquarkus.vertx.event-loops-pool-size=1
+          - -Dquarkus.vertx.internal-blocking-pool-size=1
+          - -Dquarkus.vertx.worker-pool-size=1
+          - -Dquarkus.http.io-threads=1
+          - -Dquarkus.thread-pool.core-threads=1
           - -Dquarkus.http.ssl.certificate.file=/var/certs/tls.crt
           - -Dquarkus.http.ssl.certificate.key-file=/var/certs/tls.key
           - -jar
@@ -98,7 +98,6 @@ items:
           - name: JAVA_OPTIONS
             value: >
               -Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4j2LogDelegateFactory
-              -Dvertx.options.workerPoolSize={{ backend_workers | default(20, true) }}
           ports:
           - containerPort: 8080
             protocol: TCP
