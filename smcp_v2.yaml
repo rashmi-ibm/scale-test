@@ -37,12 +37,12 @@ spec:
               "{\"sidecar.istio.io/statsInclusionPrefixes\": \"cluster.outbound,listener\"}"
           resources:
             # Missing the limits would cause errors with requests above limits
-            limits:
-              cpu: "256"
-              memory: 256Gi
-            requests:
-              cpu: "16"
-              memory: 2Gi
+#            limits:
+#              cpu: "256"
+#              memory: 256Gi
+#            requests:
+#              cpu: "16"
+#              memory: 2Gi
         deployment:
           autoScaling:
             enabled: false
