@@ -57,10 +57,10 @@ items:
           effect: NoExecute
         containers:
 {% if backend_type == "java" %}
-        - image: quay.io/rvansa/mannequin:jvm-latest
+        - image: quay.io/maistra/mannequin-jvm:ibm-p
 {% endif %}
 {% if backend_type == "native" %}
-        - image: quay.io/rvansa/mannequin:native
+        - image: quay.io/maistra/mannequin-jvm:ibm-p
 {% endif %}
           imagePullPolicy: Always
           name: mannequin
